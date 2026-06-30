@@ -1,0 +1,12 @@
+{
+  "name": "gerencia-prof",
+  "version": "1.0.0",
+  "description": "Web app gratuito para gestão de professores, matérias e entregas de tarefas mensais.",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "serve": "node server.js"
+  },
+  "keywords": ["professores", "tarefas", "escola", "cordova", "pwa"],
+  "license": "MIT"
+}

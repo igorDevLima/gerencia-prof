@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="br.edu.gerenciaprof" version="1.0.0"
+        xmlns="http://www.w3.org/ns/widgets"
+        xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Gerência Prof</name>
+    <description>Gestão de professores, matérias e entregas de tarefas mensais.</description>
+    <author email="tlooficialbr@gmail.com">Coordenação do curso</author>
+
+    <!-- A pasta www/ é a raiz da aplicação (compatível com Cordova). -->
+    <content src="index.html" />
+
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="BackgroundColor" value="0xfff1f5f9" />
+    <preference name="SplashMaintainAspectRatio" value="true" />
+    <preference name="android-minSdkVersion" value="24" />
+
+    <platform name="android">
+        <allow-intent href="market:*" />
+        <icon src="www/img/icon-512.png" density="xxxhdpi" />
+        <icon src="www/img/icon-192.png" density="xhdpi" />
+    </platform>
+
+    <platform name="ios">
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+        <icon src="www/img/icon-512.png" width="512" height="512" />
+    </platform>
+</widget>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Gerência Prof">
+  <rect width="512" height="512" rx="112" fill="#2563eb"/>
+  <!-- Clipboard -->
+  <rect x="146" y="120" width="220" height="280" rx="26" fill="#ffffff"/>
+  <rect x="210" y="98" width="92" height="48" rx="18" fill="#1d4ed8"/>
+  <!-- Linhas de lista -->
+  <g fill="#cbd5e1">
+    <rect x="186" y="212" width="140" height="18" rx="9"/>
+    <rect x="186" y="262" width="140" height="18" rx="9"/>
+    <rect x="186" y="312" width="140" height="18" rx="9"/>
+  </g>
+  <!-- Marcas de entrega -->
+  <g fill="none" stroke="#16a34a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 213 l14 14 22 -26"/>
+    <path d="M150 263 l14 14 22 -26"/>
+  </g>
+  <circle cx="163" cy="316" r="14" fill="#dc2626"/>
+</svg>
