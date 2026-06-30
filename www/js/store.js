@@ -9,8 +9,27 @@
   const STORAGE_KEY = "gerencia-prof:v1";
   const SCHEMA_VERSION = 1;
 
+  // Valores iniciais do cabeçalho da observação (do template oficial).
+  const DEFAULT_OBS_HEADER = {
+    escola: "Escola Estadual de Ensino Médio “Nossa Senhora de Lourdes”",
+    etapa: "Ensino Médio",
+    modalidade: "Curso Técnico em Informática para Internet Integrado ao Ensino Médio",
+    turno: "",
+    area: "",
+    coordenadoraPedagogica: "Wiviane Fabris Fávaro Dondoni",
+    coordenadorArea: "",
+  };
+  const OBS_HEADER_KEYS = Object.keys(DEFAULT_OBS_HEADER);
+  const OBS_CRITERIA_COUNT = 10;
+
   function emptyState() {
-    return { version: SCHEMA_VERSION, teachers: [], tasks: [] };
+    return {
+      version: SCHEMA_VERSION,
+      teachers: [],
+      tasks: [],
+      observations: [],
+      obsDefaults: Object.assign({}, DEFAULT_OBS_HEADER),
+    };
   }
 
   function uid(prefix) {
@@ -40,6 +59,10 @@
     const s = emptyState();
     if (Array.isArray(data.teachers)) s.teachers = data.teachers;
     if (Array.isArray(data.tasks)) s.tasks = data.tasks;
+    if (Array.isArray(data.observations)) s.observations = data.observations;
+    if (data.obsDefaults && typeof data.obsDefaults === "object") {
+      s.obsDefaults = Object.assign({}, DEFAULT_OBS_HEADER, data.obsDefaults);
+    }
     return s;
   }
 
@@ -194,6 +217,131 @@
     return clone(task);
   }
 
+  // --- Observações de aula ------------------------------------------------
+  function emptyCriterios() {
+    const arr = [];
+    for (let i = 0; i < OBS_CRITERIA_COUNT; i++) arr.push({ mark: "", evidencias: "" });
+    return arr;
+  }
+
+  function getObsDefaults() {
+    return Object.assign({}, DEFAULT_OBS_HEADER, state.obsDefaults || {});
+  }
+
+  // Guarda os campos de cabeçalho para reutilizar na próxima observação.
+  function rememberObsDefaults(obs) {
+    state.obsDefaults = state.obsDefaults || {};
+    OBS_HEADER_KEYS.forEach((k) => {
+      if (obs[k] != null && String(obs[k]).trim() !== "") state.obsDefaults[k] = obs[k];
+    });
+  }
+
+  function sanitizeObservation(payload, base) {
+    const o = base || {};
+    const str = (v, fb) => (v != null ? String(v) : fb != null ? fb : "");
+    const result = {
+      id: o.id,
+      teacherId: payload.teacherId || o.teacherId || "",
+      escola: str(payload.escola, o.escola),
+      etapa: str(payload.etapa, o.etapa),
+      modalidade: str(payload.modalidade, o.modalidade),
+      turno: str(payload.turno, o.turno),
+      area: str(payload.area, o.area),
+      coordenadoraPedagogica: str(payload.coordenadoraPedagogica, o.coordenadoraPedagogica),
+      coordenadorArea: str(payload.coordenadorArea, o.coordenadorArea),
+      disciplina: str(payload.disciplina, o.disciplina),
+      professor: str(payload.professor, o.professor),
+      serieTurma: str(payload.serieTurma, o.serieTurma),
+      dataObservacao: str(payload.dataObservacao, o.dataObservacao),
+      horario: str(payload.horario, o.horario),
+      observacoes: str(payload.observacoes, o.observacoes),
+      registroEvidencias: str(payload.registroEvidencias, o.registroEvidencias),
+      sugestoes: str(payload.sugestoes, o.sugestoes),
+      dataFeedback: str(payload.dataFeedback, o.dataFeedback),
+      assinaturas: {
+        regente: str((payload.assinaturas || {}).regente, (o.assinaturas || {}).regente),
+        coordenadorArea: str((payload.assinaturas || {}).coordenadorArea, (o.assinaturas || {}).coordenadorArea),
+        pedagoga: str((payload.assinaturas || {}).pedagoga, (o.assinaturas || {}).pedagoga),
+        coordenadoraPedagogica: str((payload.assinaturas || {}).coordenadoraPedagogica, (o.assinaturas || {}).coordenadoraPedagogica),
+      },
+      criterios: emptyCriterios(),
+    };
+    const src = Array.isArray(payload.criterios) ? payload.criterios : (o.criterios || []);
+    result.criterios = result.criterios.map((c, i) => {
+      const s = src[i] || {};
+      const mark = ["sim", "nao", "na"].includes(s.mark) ? s.mark : "";
+      return { mark, evidencias: s.evidencias != null ? String(s.evidencias) : "" };
+    });
+    return result;
+  }
+
+  function getObservations() {
+    return clone(state.observations).sort((a, b) => {
+      const ka = a.dataObservacao || "";
+      const kb = b.dataObservacao || "";
+      if (ka !== kb) return kb.localeCompare(ka);
+      return (b.createdAt || "").localeCompare(a.createdAt || "");
+    });
+  }
+
+  function getObservation(id) {
+    const o = state.observations.find((x) => x.id === id);
+    return o ? clone(o) : null;
+  }
+
+  function addObservation(payload) {
+    const obs = sanitizeObservation(payload, {});
+    obs.id = uid("o_");
+    obs.createdAt = new Date().toISOString();
+    obs.updatedAt = obs.createdAt;
+    state.observations.push(obs);
+    rememberObsDefaults(obs);
+    persist();
+    return clone(obs);
+  }
+
+  function updateObservation(id, payload) {
+    const existing = state.observations.find((x) => x.id === id);
+    if (!existing) return null;
+    const updated = sanitizeObservation(payload, existing);
+    updated.id = id;
+    updated.createdAt = existing.createdAt;
+    updated.updatedAt = new Date().toISOString();
+    const idx = state.observations.indexOf(existing);
+    state.observations[idx] = updated;
+    rememberObsDefaults(updated);
+    persist();
+    return clone(updated);
+  }
+
+  function deleteObservation(id) {
+    state.observations = state.observations.filter((x) => x.id !== id);
+    persist();
+  }
+
+  // Cria uma observação em branco já com os defaults do cabeçalho.
+  function newObservationDraft() {
+    const defaults = getObsDefaults();
+    return Object.assign(
+      {
+        id: null,
+        teacherId: "",
+        disciplina: "",
+        professor: "",
+        serieTurma: "",
+        dataObservacao: new Date().toISOString().slice(0, 10),
+        horario: "",
+        observacoes: "",
+        registroEvidencias: "",
+        sugestoes: "",
+        dataFeedback: "",
+        assinaturas: { regente: "", coordenadorArea: "", pedagoga: "", coordenadoraPedagogica: "" },
+        criterios: emptyCriterios(),
+      },
+      defaults
+    );
+  }
+
   // --- Relatórios ---------------------------------------------------------
   // Retorna o mês (YYYY-MM) de referência de uma tarefa.
   function taskMonth(task) {
@@ -273,6 +421,7 @@
       teachers: state.teachers.length,
       tasks: state.tasks.length,
       months: months.length,
+      observations: state.observations.length,
       pendingDeliveries,
       totalDeliveries,
       currentMonth,
@@ -298,15 +447,18 @@
       throw new Error("Arquivo inválido: não é um JSON válido.");
     }
     const incoming = parsed && parsed.data ? parsed.data : parsed;
-    if (!incoming || (!Array.isArray(incoming.teachers) && !Array.isArray(incoming.tasks))) {
+    if (!incoming || (!Array.isArray(incoming.teachers) && !Array.isArray(incoming.tasks) && !Array.isArray(incoming.observations))) {
       throw new Error("Arquivo inválido: estrutura não reconhecida.");
     }
     const next = normalize(incoming);
     if (merge) {
       const teacherIds = new Set(state.teachers.map((t) => t.id));
       const taskIds = new Set(state.tasks.map((t) => t.id));
+      const obsIds = new Set(state.observations.map((o) => o.id));
       next.teachers.forEach((t) => { if (!teacherIds.has(t.id)) state.teachers.push(t); });
       next.tasks.forEach((t) => { if (!taskIds.has(t.id)) state.tasks.push(t); });
+      next.observations.forEach((o) => { if (!obsIds.has(o.id)) state.observations.push(o); });
+      state.obsDefaults = Object.assign({}, next.obsDefaults, state.obsDefaults);
     } else {
       state = next;
     }
@@ -353,6 +505,28 @@
       setDelivery(monthlyTask.id, profs[1].id, true);
       setDelivery(monthlyTask.id, profs[2].id, true);
     }
+
+    // Observação de aula de exemplo.
+    const marks = ["sim", "sim", "na", "nao", "sim", "sim", "nao", "sim", "sim", "na"];
+    addObservation({
+      teacherId: profs[0].id,
+      professor: profs[0].name,
+      disciplina: (profs[0].subjects && profs[0].subjects[0]) || "Programação Web",
+      serieTurma: "2º Ano — Turma B",
+      dataObservacao: new Date().toISOString().slice(0, 10),
+      horario: "15h-15h50",
+      area: "Área Técnica — Informática",
+      criterios: marks.map((m, i) => ({
+        mark: m,
+        evidencias: i === 0 ? "A professora apresentou a habilidade na folha de atividade." : "",
+      })),
+      observacoes: "Registro da frequência no início da aula. Boa interação com a turma.",
+      registroEvidencias: "Revisão de conteúdo e exercícios projetados, com resolução no caderno.",
+      sugestoes: "Recomenda-se apresentar a habilidade correspondente e atentar-se ao tempo da aula.",
+      dataFeedback: new Date().toISOString().slice(0, 10),
+      assinaturas: { regente: profs[0].name, coordenadorArea: "", pedagoga: "", coordenadoraPedagogica: "" },
+    });
+
     return getStats();
   }
 
@@ -362,6 +536,9 @@
     getTeachers, getTeacher, addTeacher, updateTeacher, deleteTeacher,
     // tarefas
     getTasks, getTask, addTask, updateTask, deleteTask, setDelivery,
+    // observações de aula
+    getObservations, getObservation, addObservation, updateObservation,
+    deleteObservation, newObservationDraft, getObsDefaults,
     // relatórios
     getMonthlyReport, getMonthsWithTasks, getStats, taskMonth,
     // backup

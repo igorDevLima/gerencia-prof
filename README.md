@@ -14,6 +14,8 @@ dados, login ou mensalidade. Tudo funciona dentro do navegador e **offline**.
 - **Criar tarefas** (mensais ou avulsas) e atribuí-las aos professores responsáveis.
 - **Marcar quem entregou** e quem ainda não entregou, com data e hora da entrega.
 - **Gerar relatório** dos professores que **não entregaram** a tarefa de um determinado mês.
+- **Observação de aula:** preencher o protocolo oficial (critérios + feedback) e
+  **exportar em `.docx`** no mesmo template do modelo (com o timbre oficial).
 - **Imprimir / salvar em PDF** e **exportar CSV** do relatório de pendências.
 - **Backup e restauração** dos dados em arquivo `.json`.
 - Instalável como **app** no celular ou computador (PWA) e pronto para virar **APK** com Cordova.
@@ -88,6 +90,27 @@ O APK gerado fica em `platforms/android/app/build/outputs/apk/`.
 
 ---
 
+## 👁️ Observação de aula (exportação em .docx)
+
+Na aba **Observação de aula** você:
+
+1. Clica em **Nova observação** e preenche a **identificação** (professor, disciplina,
+   série/turma, data e horário). O cabeçalho (escola, etapa, modalidade, coordenação)
+   já vem preenchido e é **lembrado** para as próximas observações.
+2. Para cada um dos **10 critérios**, marca **Sim / Não / Não foi possível observar**
+   e registra as **evidências** (há frases-guia como sugestão).
+3. Preenche o **Protocolo do Feedback** (registro de evidências, sugestões, data e
+   assinaturas).
+4. Clica em **Salvar e exportar .docx** — o documento é gerado **no mesmo template do
+   modelo oficial**, com o **timbre** (Governo do ES / Secretaria de Educação / EEEM
+   Nossa Senhora de Lourdes), as tabelas do protocolo e o bloco de feedback.
+
+O `.docx` é montado inteiramente no navegador (sem enviar nada para servidores) e abre
+no Word, LibreOffice ou Google Docs. O modelo oficial usado como referência está em
+[`docs/template-observacao-aula.docx`](docs/template-observacao-aula.docx).
+
+---
+
 ## 💾 Sobre os dados e backup (importante!)
 
 Os dados são salvos no **armazenamento local do próprio navegador**
@@ -113,12 +136,16 @@ gerencia-prof/
 │   ├── index.html          ← página principal (SPA)
 │   ├── css/styles.css      ← estilos (responsivo, modo de impressão, mobile)
 │   ├── js/
-│   │   ├── store.js        ← dados e regras (localStorage, relatórios)
+│   │   ├── store.js        ← dados e regras (localStorage, relatórios, observações)
 │   │   ├── ui.js           ← utilitários de interface (modal, toast, formatação)
+│   │   ├── docx.js         ← gerador de .docx (ZIP + OOXML, sem dependências)
+│   │   ├── letterhead.js   ← timbre oficial (imagem em base64) p/ o .docx
 │   │   └── app.js          ← telas e navegação
 │   ├── img/                ← ícones do app
 │   ├── manifest.json       ← configuração PWA
 │   └── sw.js               ← service worker (uso offline)
+├── docs/
+│   └── template-observacao-aula.docx  ← modelo oficial de referência
 ├── config.xml              ← configuração do Cordova
 ├── server.js               ← servidor estático local (sem dependências)
 ├── package.json
