@@ -80,6 +80,12 @@ cordova build android
 O APK gerado fica em `platforms/android/app/build/outputs/apk/`.
 (É necessário ter o Android SDK / Android Studio instalados.)
 
+> **Cores no `config.xml`:** o `cordova-android` 15+ exige cores no formato
+> Android (`#AARRGGBB`, ex.: `#fff1f5f9`). O formato antigo `0xAARRGGBB` causa o
+> erro de build *"expected color but got (raw string)"*. Após alterar o
+> `config.xml`, rode novamente `cordova build android` (o `prepare` regenera os
+> arquivos nativos). Se persistir algum cache, use `cordova clean android` antes.
+
 ---
 
 ## 💾 Sobre os dados e backup (importante!)
