@@ -91,11 +91,12 @@
     return t ? clone(t) : null;
   }
 
-  function addTeacher({ name, email, subjects }) {
+  function addTeacher({ name, email, phone, subjects }) {
     const teacher = {
       id: uid("t_"),
       name: (name || "").trim(),
       email: (email || "").trim(),
+      phone: (phone || "").trim(),
       subjects: cleanSubjects(subjects),
       createdAt: new Date().toISOString(),
     };
@@ -104,11 +105,12 @@
     return clone(teacher);
   }
 
-  function updateTeacher(id, { name, email, subjects }) {
+  function updateTeacher(id, { name, email, phone, subjects }) {
     const teacher = state.teachers.find((x) => x.id === id);
     if (!teacher) return null;
     teacher.name = (name || "").trim();
     teacher.email = (email || "").trim();
+    teacher.phone = (phone || "").trim();
     teacher.subjects = cleanSubjects(subjects);
     persist();
     return clone(teacher);
@@ -156,14 +158,37 @@
     return (b.createdAt || "").localeCompare(a.createdAt || "");
   }
 
-  function addTask({ title, description, type, referenceMonth, dueDate, teacherIds }) {
+  // Calcula a 1ª sexta-feira de um mês "YYYY-MM" -> "YYYY-MM-DD".
+  function firstFridayOf(ym) {
+    if (!/^\d{4}-\d{2}$/.test(ym || "")) return "";
+    const [y, m] = ym.split("-").map(Number);
+    const first = new Date(y, m - 1, 1);
+    const offset = (5 - first.getDay() + 7) % 7; // 5 = sexta-feira
+    const day = 1 + offset;
+    return `${ym}-${String(day).padStart(2, "0")}`;
+  }
+
+  // Resolve o tipo de regra de entrega e a data final resultante.
+  function resolveDue(type, referenceMonth, dueDate, dueRule) {
+    const rule = type === "monthly" && dueRule === "firstFriday" ? "firstFriday" : "";
+    if (rule === "firstFriday" && referenceMonth) {
+      return { dueRule: rule, dueDate: firstFridayOf(referenceMonth) };
+    }
+    return { dueRule: rule, dueDate: dueDate || "" };
+  }
+
+  function addTask({ title, description, type, referenceMonth, dueDate, dueRule, teacherIds }) {
+    const normType = type === "monthly" ? "monthly" : "single";
+    const refMonth = normType === "monthly" ? referenceMonth || "" : "";
+    const due = resolveDue(normType, refMonth, dueDate, dueRule);
     const task = {
       id: uid("k_"),
       title: (title || "").trim(),
       description: (description || "").trim(),
-      type: type === "monthly" ? "monthly" : "single",
-      referenceMonth: type === "monthly" ? referenceMonth || "" : "",
-      dueDate: dueDate || "",
+      type: normType,
+      referenceMonth: refMonth,
+      dueRule: due.dueRule,
+      dueDate: due.dueDate,
       assignments: buildAssignments(teacherIds, []),
       createdAt: new Date().toISOString(),
     };
@@ -172,14 +197,16 @@
     return clone(task);
   }
 
-  function updateTask(id, { title, description, type, referenceMonth, dueDate, teacherIds }) {
+  function updateTask(id, { title, description, type, referenceMonth, dueDate, dueRule, teacherIds }) {
     const task = state.tasks.find((x) => x.id === id);
     if (!task) return null;
     task.title = (title || "").trim();
     task.description = (description || "").trim();
     task.type = type === "monthly" ? "monthly" : "single";
     task.referenceMonth = task.type === "monthly" ? referenceMonth || "" : "";
-    task.dueDate = dueDate || "";
+    const due = resolveDue(task.type, task.referenceMonth, dueDate, dueRule);
+    task.dueRule = due.dueRule;
+    task.dueDate = due.dueDate;
     // Preserva o status de entrega dos professores que continuam na tarefa.
     task.assignments = buildAssignments(teacherIds, task.assignments);
     persist();
@@ -475,19 +502,19 @@
   function loadSampleData() {
     state = emptyState();
     const profs = [
-      { name: "Ana Souza", email: "ana@escola.edu", subjects: ["Programação Web", "Lógica de Programação"] },
-      { name: "Bruno Lima", email: "bruno@escola.edu", subjects: ["Banco de Dados"] },
-      { name: "Carla Mendes", email: "carla@escola.edu", subjects: ["Redes de Computadores", "Sistemas Operacionais"] },
-      { name: "Diego Rocha", email: "", subjects: ["Front-end", "UX/UI"] },
+      { name: "Ana Souza", email: "ana@escola.edu", phone: "(27) 99999-0001", subjects: ["Programação Web", "Lógica de Programação"] },
+      { name: "Bruno Lima", email: "bruno@escola.edu", phone: "(27) 99999-0002", subjects: ["Banco de Dados"] },
+      { name: "Carla Mendes", email: "carla@escola.edu", phone: "", subjects: ["Redes de Computadores", "Sistemas Operacionais"] },
+      { name: "Diego Rocha", email: "", phone: "", subjects: ["Front-end", "UX/UI"] },
     ].map((p) => addTeacher(p));
 
     const month = new Date().toISOString().slice(0, 7);
     addTask({
       title: "Diário de classe — entrega mensal",
-      description: "Enviar o diário de classe preenchido até o último dia útil do mês.",
+      description: "Enviar o diário de classe preenchido até a sexta-feira da primeira semana do mês.",
       type: "monthly",
       referenceMonth: month,
-      dueDate: month + "-30",
+      dueRule: "firstFriday",
       teacherIds: profs.map((p) => p.id),
     });
     addTask({
@@ -535,7 +562,7 @@
     // professores
     getTeachers, getTeacher, addTeacher, updateTeacher, deleteTeacher,
     // tarefas
-    getTasks, getTask, addTask, updateTask, deleteTask, setDelivery,
+    getTasks, getTask, addTask, updateTask, deleteTask, setDelivery, firstFridayOf,
     // observações de aula
     getObservations, getObservation, addObservation, updateObservation,
     deleteObservation, newObservationDraft, getObsDefaults,

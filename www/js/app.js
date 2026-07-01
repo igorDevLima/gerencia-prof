@@ -186,7 +186,7 @@
           <div class="item__head">
             <div>
               <h3 class="item__title">${escapeHtml(t.name)}</h3>
-              ${t.email ? `<div class="item__meta"><span>✉️ ${escapeHtml(t.email)}</span></div>` : ""}
+              ${(t.email || t.phone) ? `<div class="item__meta">${t.email ? `<span>✉️ ${escapeHtml(t.email)}</span>` : ""}${t.phone ? `<span>📱 ${escapeHtml(t.phone)}</span>` : ""}</div>` : ""}
             </div>
             <div class="item__actions">
               <button class="btn-icon" title="Editar" data-edit-teacher="${t.id}">✏️</button>
@@ -221,10 +221,18 @@
           <input class="input" id="tName" required maxlength="120"
                  value="${escapeHtml(teacher ? teacher.name : "")}" placeholder="Ex.: Maria Silva" />
         </div>
-        <div class="field">
-          <label for="tEmail">E-mail (opcional)</label>
-          <input class="input" id="tEmail" type="email" maxlength="160"
-                 value="${escapeHtml(teacher ? teacher.email : "")}" placeholder="maria@escola.edu" />
+        <div class="form-row">
+          <div class="field">
+            <label for="tEmail">E-mail (opcional)</label>
+            <input class="input" id="tEmail" type="email" maxlength="160"
+                   value="${escapeHtml(teacher ? teacher.email : "")}" placeholder="maria@escola.edu" />
+          </div>
+          <div class="field">
+            <label for="tPhone">WhatsApp (opcional)</label>
+            <input class="input" id="tPhone" type="tel" maxlength="30"
+                   value="${escapeHtml(teacher ? teacher.phone || "" : "")}" placeholder="Ex.: (27) 99999-8888" />
+            <div class="hint">Com DDD. Usado para enviar avisos pelo WhatsApp.</div>
+          </div>
         </div>
         <div class="field">
           <label for="tSubject">Matérias</label>
@@ -277,7 +285,8 @@
         const name = body.querySelector("#tName").value.trim();
         if (!name) { toast("Informe o nome do professor.", "danger"); return; }
         const email = body.querySelector("#tEmail").value.trim();
-        const payload = { name, email, subjects };
+        const phone = body.querySelector("#tPhone").value.trim();
+        const payload = { name, email, phone, subjects };
         if (id) { Store.updateTeacher(id, payload); toast("Professor atualizado.", "success"); }
         else { Store.addTeacher(payload); toast("Professor cadastrado.", "success"); }
         closeModal();
@@ -384,6 +393,8 @@
       ? `<span class="badge badge--muted">${escapeHtml(formatMonth(task.referenceMonth))}</span>` : "";
     const dueBadge = task.dueDate
       ? `<span class="badge badge--muted">Entrega: ${escapeHtml(formatDate(task.dueDate))}</span>` : "";
+    const ruleBadge = task.dueRule === "firstFriday"
+      ? `<span class="badge badge--info">1ª sexta do mês</span>` : "";
     const statusBadge = total === 0
       ? `<span class="badge badge--muted">Sem responsáveis</span>`
       : pending === 0
@@ -423,7 +434,7 @@
         <div class="item__head">
           <div style="min-width:0">
             <h3 class="item__title">${escapeHtml(task.title)}</h3>
-            <div class="item__meta">${typeBadge}${monthBadge}${dueBadge}${statusBadge}</div>
+            <div class="item__meta">${typeBadge}${monthBadge}${dueBadge}${ruleBadge}${statusBadge}</div>
           </div>
           <div class="item__actions">
             <button class="btn-icon" title="Editar" data-edit-task="${task.id}">✏️</button>
@@ -431,14 +442,17 @@
           </div>
         </div>
         ${task.description ? `<div class="item__body text-sm">${escapeHtml(task.description)}</div>` : ""}
-        <div class="flex between center" style="margin-top:12px;gap:12px">
-          <div class="grow">
+        <div class="flex between center wrap" style="margin-top:12px;gap:12px">
+          <div class="grow" style="min-width:180px">
             <div class="text-sm muted">${delivered}/${total} ${pluralize(total, "entrega", "entregas")} (${pct}%)</div>
             <div class="progress"><div class="progress__bar" style="width:${pct}%"></div></div>
           </div>
-          <button class="btn btn--ghost btn--sm" data-toggle-task="${task.id}">
-            ${expanded ? "Ocultar" : "Marcar entregas"}
-          </button>
+          <div class="flex gap wrap">
+            <button class="btn btn--ghost btn--sm" data-share-task="${task.id}">📲 Compartilhar</button>
+            <button class="btn btn--ghost btn--sm" data-toggle-task="${task.id}">
+              ${expanded ? "Ocultar" : "Marcar entregas"}
+            </button>
+          </div>
         </div>
         ${expanded ? `<div class="item__body">${deliveries}</div>` : ""}
       </div>`;
@@ -458,6 +472,8 @@
         else expandedTasks.add(tid);
         refreshTaskCard(tid, teachers);
       }));
+    view.querySelectorAll("[data-share-task]").forEach((b) =>
+      b.addEventListener("click", () => openShareModal(b.getAttribute("data-share-task"))));
     view.querySelectorAll("[data-delivery]").forEach((chk) =>
       chk.addEventListener("change", () => {
         const [taskId, teacherId] = chk.getAttribute("data-delivery").split("|");
@@ -497,6 +513,8 @@
         else expandedTasks.add(tid);
         refreshTaskCard(tid, teachers);
       }));
+    card.querySelectorAll("[data-share-task]").forEach((b) =>
+      b.addEventListener("click", () => openShareModal(b.getAttribute("data-share-task"))));
     card.querySelectorAll("[data-delivery]").forEach((chk) =>
       chk.addEventListener("change", () => {
         const [taskId, teacherId] = chk.getAttribute("data-delivery").split("|");
@@ -539,6 +557,12 @@
             <input class="input" id="kDue" type="date" value="${escapeHtml(task ? task.dueDate : "")}" />
           </div>
         </div>
+        <div class="field" id="firstFridayField" ${isMonthly ? "" : 'style="display:none"'}>
+          <label class="checkbox-row">
+            <input type="checkbox" id="kFirstFriday" ${task && task.dueRule === "firstFriday" ? "checked" : ""} />
+            <span>Entrega sempre na <strong>sexta-feira da primeira semana do mês</strong> (a data é calculada automaticamente)</span>
+          </label>
+        </div>
         <div class="field">
           <div class="flex between center">
             <label class="mb-0">Professores responsáveis</label>
@@ -566,9 +590,35 @@
       body.querySelector("[data-close-modal]").addEventListener("click", closeModal);
       const typeSel = body.querySelector("#kType");
       const monthField = body.querySelector("#monthField");
-      typeSel.addEventListener("change", () => {
-        monthField.style.display = typeSel.value === "monthly" ? "" : "none";
-      });
+      const monthInput = body.querySelector("#kMonth");
+      const dueInput = body.querySelector("#kDue");
+      const fridayField = body.querySelector("#firstFridayField");
+      const fridayChk = body.querySelector("#kFirstFriday");
+
+      // Quando a regra "1ª sexta" está ativa, calcula a data e trava o campo.
+      function applyFirstFriday() {
+        if (typeSel.value === "monthly" && fridayChk.checked) {
+          const d = Store.firstFridayOf(monthInput.value);
+          if (d) dueInput.value = d;
+          dueInput.readOnly = true;
+          dueInput.style.opacity = "0.6";
+        } else {
+          dueInput.readOnly = false;
+          dueInput.style.opacity = "";
+        }
+      }
+      function syncType() {
+        const monthly = typeSel.value === "monthly";
+        monthField.style.display = monthly ? "" : "none";
+        fridayField.style.display = monthly ? "" : "none";
+        if (!monthly) fridayChk.checked = false;
+        applyFirstFriday();
+      }
+      typeSel.addEventListener("change", syncType);
+      fridayChk.addEventListener("change", applyFirstFriday);
+      monthInput.addEventListener("change", applyFirstFriday);
+      applyFirstFriday();
+
       const checks = () => Array.from(body.querySelectorAll('#teacherChecks input[type="checkbox"]'));
       body.querySelector("#selAll").addEventListener("click", () => checks().forEach((c) => (c.checked = true)));
       body.querySelector("#selNone").addEventListener("click", () => checks().forEach((c) => (c.checked = false)));
@@ -588,6 +638,7 @@
           type,
           referenceMonth,
           dueDate: body.querySelector("#kDue").value,
+          dueRule: type === "monthly" && fridayChk.checked ? "firstFriday" : "",
           teacherIds: checks().filter((c) => c.checked).map((c) => c.value),
         };
         if (id) { Store.updateTask(id, payload); toast("Tarefa atualizada.", "success"); }
@@ -612,6 +663,129 @@
     expandedTasks.delete(id);
     toast("Tarefa excluída.", "success");
     renderTasks();
+  }
+
+  // ---------------------------------------------- Compartilhar (WhatsApp)
+  // Saudação conforme o horário atual.
+  function greetingNow() {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  }
+
+  // Texto da data final de entrega da tarefa (ou referência mensal).
+  function taskDueText(task) {
+    if (task.dueDate) return { text: formatDate(task.dueDate), hasDate: true };
+    if (task.type === "monthly" && task.referenceMonth) {
+      return { text: formatMonth(task.referenceMonth).toLowerCase(), hasDate: false };
+    }
+    return { text: "", hasDate: false };
+  }
+
+  // Monta a mensagem profissional (sem emojis) para o WhatsApp.
+  function buildShareMessage(task, teacherName) {
+    const g = greetingNow();
+    const who = teacherName ? teacherName.trim() : "professor(a)";
+    const due = taskDueText(task);
+    const lines = [];
+    lines.push(`${g}, ${who}.`);
+    lines.push("");
+    if (due.hasDate) {
+      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}", cujo prazo final é ${due.text}.`);
+    } else if (due.text) {
+      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}", referente ao mês de ${due.text}.`);
+    } else {
+      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}".`);
+    }
+    lines.push("");
+    lines.push("Por gentileza, realize o envio dentro do prazo. Caso já tenha entregado, favor desconsiderar esta mensagem.");
+    lines.push("");
+    lines.push("Atenciosamente,");
+    lines.push("Coordenação.");
+    return lines.join("\n");
+  }
+
+  // Normaliza o telefone para o formato do WhatsApp (só dígitos, com DDI).
+  function normalizeWhatsPhone(raw) {
+    let d = String(raw || "").replace(/\D/g, "");
+    if (!d) return "";
+    if (d.length <= 11) d = "55" + d; // acrescenta o DDI do Brasil se veio só com DDD
+    return d;
+  }
+
+  function waLink(phone, text) {
+    const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
+    return base + "?text=" + encodeURIComponent(text);
+  }
+
+  function openShareModal(taskId) {
+    const task = Store.getTask(taskId);
+    if (!task) return;
+    const teacherMap = new Map(Store.getTeachers().map((t) => [t.id, t]));
+    const assigned = task.assignments.map((a) => teacherMap.get(a.teacherId)).filter(Boolean);
+    const genericMsg = buildShareMessage(task, "");
+
+    let teacherRows;
+    if (!assigned.length) {
+      teacherRows = `<p class="muted text-sm">Nenhum professor atribuído a esta tarefa. Edite a tarefa para adicionar responsáveis.</p>`;
+    } else {
+      teacherRows = assigned.map((t) => {
+        const phone = normalizeWhatsPhone(t.phone);
+        if (phone) {
+          const msg = buildShareMessage(task, t.name);
+          return `
+            <div class="delivery">
+              <div class="delivery__info">
+                <div class="delivery__name">${escapeHtml(t.name)}</div>
+                <div class="delivery__sub">${escapeHtml(t.phone)}</div>
+              </div>
+              <a class="btn btn--sm" target="_blank" rel="noopener" href="${escapeHtml(waLink(phone, msg))}">Enviar</a>
+            </div>`;
+        }
+        return `
+          <div class="delivery">
+            <div class="delivery__info">
+              <div class="delivery__name">${escapeHtml(t.name)}</div>
+              <div class="delivery__sub muted">Sem WhatsApp cadastrado</div>
+            </div>
+            <button class="btn btn--ghost btn--sm" data-add-phone="${t.id}">Adicionar</button>
+          </div>`;
+      }).join("");
+    }
+
+    const html = `
+      <div class="field">
+        <label for="shareMsg">Mensagem</label>
+        <textarea class="textarea" id="shareMsg" rows="9">${escapeHtml(genericMsg)}</textarea>
+        <div class="hint">A saudação muda conforme o horário (bom dia / boa tarde / boa noite). Você pode editar antes de enviar.</div>
+      </div>
+      <div class="flex gap wrap" style="margin-bottom:4px">
+        <button class="btn btn--ghost" id="copyMsg" type="button">Copiar mensagem</button>
+        <button class="btn" id="openWa" type="button">Abrir no WhatsApp</button>
+      </div>
+      <hr class="divider">
+      <h3 class="mt-0" style="font-size:1rem">Enviar direto para cada professor</h3>
+      <p class="muted text-sm mt-0">Cada mensagem é personalizada com o nome do professor.</p>
+      <div class="list">${teacherRows}</div>`;
+
+    openModal("Compartilhar tarefa no WhatsApp", html, (body) => {
+      body.querySelector("#copyMsg").addEventListener("click", async () => {
+        const ok = await UI.copyText(body.querySelector("#shareMsg").value);
+        toast(ok ? "Mensagem copiada." : "Não foi possível copiar.", ok ? "success" : "danger");
+      });
+      body.querySelector("#openWa").addEventListener("click", () => {
+        const text = body.querySelector("#shareMsg").value;
+        global.open(waLink("", text), "_blank", "noopener");
+      });
+      body.querySelectorAll("[data-add-phone]").forEach((b) =>
+        b.addEventListener("click", () => {
+          const tid = b.getAttribute("data-add-phone");
+          closeModal();
+          navigate("professores");
+          openTeacherForm(tid);
+        }));
+    });
   }
 
   // ======================================================================

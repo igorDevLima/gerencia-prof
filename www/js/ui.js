@@ -137,6 +137,30 @@
     });
   }
 
+  // Copia texto para a área de transferência (com fallback para execCommand).
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { /* tenta o fallback abaixo */ }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Dispara o download de um arquivo de texto gerado no cliente.
   function downloadFile(filename, content, mime) {
     const blob = new Blob([content], { type: mime || "application/json" });
@@ -155,6 +179,6 @@
     formatMonth, formatDate, formatDateTime, capitalize, pluralize,
     toast,
     openModal, closeModal, onModalClose, confirmDialog, initModalDismissal,
-    downloadFile,
+    downloadFile, copyText,
   };
 })(window);

@@ -12,7 +12,12 @@ dados, login ou mensalidade. Tudo funciona dentro do navegador e **offline**.
 
 - **Cadastrar professores** e as **matérias** que cada um leciona.
 - **Criar tarefas** (mensais ou avulsas) e atribuí-las aos professores responsáveis.
+  Há a opção de **entrega sempre na 1ª sexta-feira do mês** (a data é calculada
+  automaticamente para cada mês de referência).
 - **Marcar quem entregou** e quem ainda não entregou, com data e hora da entrega.
+- **Compartilhar a tarefa no WhatsApp** com uma mensagem profissional (sem emojis),
+  com saudação conforme o horário (bom dia / boa tarde / boa noite), o nome da
+  tarefa e o prazo final — para todos ou direto para cada professor.
 - **Gerar relatório** dos professores que **não entregaram** a tarefa de um determinado mês.
 - **Observação de aula:** preencher o protocolo oficial (critérios + feedback) e
   **exportar em `.docx`** no mesmo template do modelo (com o timbre oficial).
