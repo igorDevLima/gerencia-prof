@@ -904,8 +904,7 @@
     if (rows.length === 1) rows.push(["(nenhuma pendencia)", "", "", formatMonth(report.month)]);
     const csv = rows.map((r) => r.map(csvCell).join(";")).join("\r\n");
     // BOM (﻿) garante acentuação correta ao abrir no Excel.
-    downloadFile(`pendencias-${report.month}.csv`, "﻿" + csv, "text/csv;charset=utf-8");
-    toast("CSV exportado.", "success");
+    deliverFile(`pendencias-${report.month}.csv`, "﻿" + csv, "text/csv;charset=utf-8", "CSV");
   }
 
   function csvCell(value) {
@@ -1258,12 +1257,12 @@
       : null;
     try {
       const bytes = DocxExport.buildDocx(obs, { letterhead: lh });
-      UI.downloadFile(
+      deliverFile(
         obsFilename(obs),
         bytes,
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Documento .docx"
       );
-      toast("Documento .docx gerado.", "success");
     } catch (err) {
       console.error("Falha ao gerar .docx:", err);
       toast("Falha ao gerar o documento .docx.", "danger");
@@ -1275,6 +1274,7 @@
   // ======================================================================
   function renderBackup() {
     const s = Store.getStats();
+    const settings = Store.getSettings();
     view.innerHTML = `
       <div class="section-head">
         <div>
@@ -1318,6 +1318,43 @@
       </div></div>
 
       <div class="card"><div class="card__body">
+        <h3 class="mt-0">☁️ Google Drive (opcional)</h3>
+        <p class="text-sm">
+          Envie automaticamente as exportações (.docx, CSV e backup) para o seu Google Drive.
+          O app usa o acesso <strong>mínimo</strong> (<code>drive.file</code>): só vê os arquivos
+          que ele mesmo cria — nunca o resto do seu Drive.
+        </p>
+        ${driveProtocolWarning()}
+        <div class="field">
+          <label for="driveClientId">Client ID do OAuth (Google Cloud)</label>
+          <input class="input" id="driveClientId" placeholder="000000-xxxx.apps.googleusercontent.com"
+                 value="${escapeHtml(settings.googleClientId || "")}" />
+          <div class="hint">Como obter: veja o passo a passo no README (seção Google Drive).</div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="driveFolder">Pasta no Drive</label>
+            <input class="input" id="driveFolder" value="${escapeHtml(settings.driveFolder || "Gerência Prof")}" />
+          </div>
+        </div>
+        <label class="checkbox-row" style="margin-bottom:10px">
+          <input type="checkbox" id="driveEnabled" ${settings.driveEnabled ? "checked" : ""} />
+          <span>Enviar as exportações para o Google Drive</span>
+        </label>
+        <label class="checkbox-row" style="margin-bottom:14px">
+          <input type="checkbox" id="driveKeepLocal" ${settings.driveKeepLocal ? "checked" : ""} />
+          <span>Também manter uma cópia local (download)</span>
+        </label>
+        <div class="flex gap wrap">
+          <button class="btn btn--ghost" id="driveSave">Salvar configuração</button>
+          <button class="btn" id="driveConnect">Conectar / testar</button>
+        </div>
+        <p class="text-sm ${settings.driveEnabled ? "" : "muted"}" id="driveStatus" style="margin-bottom:0;margin-top:12px">
+          ${settings.driveEnabled ? "Envio ao Drive ativado. Use \"Conectar / testar\" para autorizar." : "Envio ao Drive desativado."}
+        </p>
+      </div></div>
+
+      <div class="card"><div class="card__body">
         <h3 class="mt-0">Outras ações</h3>
         <div class="flex gap wrap">
           <button class="btn btn--ghost" id="btnSample">Carregar dados de exemplo</button>
@@ -1327,8 +1364,7 @@
 
     view.querySelector("#btnExport").addEventListener("click", () => {
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadFile(`gerencia-prof-backup-${stamp}.json`, Store.exportData(), "application/json");
-      toast("Backup exportado.", "success");
+      deliverFile(`gerencia-prof-backup-${stamp}.json`, Store.exportData(), "application/json", "Backup");
     });
 
     view.querySelector("#btnImport").addEventListener("click", () => {
@@ -1375,6 +1411,78 @@
       toast("Todos os dados foram apagados.", "success");
       navigate("painel");
     });
+
+    // --- Google Drive ---
+    function readDriveFields() {
+      return {
+        googleClientId: view.querySelector("#driveClientId").value.trim(),
+        driveFolder: view.querySelector("#driveFolder").value.trim() || "Gerência Prof",
+        driveEnabled: view.querySelector("#driveEnabled").checked,
+        driveKeepLocal: view.querySelector("#driveKeepLocal").checked,
+      };
+    }
+    const driveStatus = view.querySelector("#driveStatus");
+
+    view.querySelector("#driveSave").addEventListener("click", () => {
+      Store.setSettings(readDriveFields());
+      toast("Configuração do Drive salva.", "success");
+    });
+
+    view.querySelector("#driveConnect").addEventListener("click", async () => {
+      const cfg = Store.setSettings(readDriveFields()); // salva antes de conectar
+      if (!cfg.googleClientId) { toast("Informe o Client ID do OAuth.", "danger"); return; }
+      if (typeof DriveSync === "undefined") { toast("Módulo do Drive indisponível.", "danger"); return; }
+      if (!DriveSync.isSupported()) {
+        toast("Abra o app por http/https (localhost ou site) para usar o Drive.", "danger");
+        return;
+      }
+      driveStatus.textContent = "Conectando ao Google…";
+      driveStatus.classList.remove("muted");
+      try {
+        await DriveSync.connect();
+        driveStatus.textContent = "Conectado ao Google Drive com sucesso. As exportações irão para a pasta \"" + cfg.driveFolder + "\".";
+        toast("Conectado ao Google Drive.", "success");
+      } catch (err) {
+        console.error(err);
+        driveStatus.textContent = "Falha ao conectar: " + (err && err.message ? err.message : "erro desconhecido");
+        toast("Falha ao conectar ao Drive.", "danger");
+      }
+    });
+  }
+
+  // Aviso quando o app está em file:// (Drive exige http/https).
+  function driveProtocolWarning() {
+    if (typeof DriveSync !== "undefined" && DriveSync.isSupported()) return "";
+    return `<p class="text-sm" style="color:var(--warning)">
+      ⚠️ Para usar o Google Drive, abra o app por <strong>http/https</strong>
+      (ex.: <code>npm start</code> ou GitHub Pages). Não funciona abrindo o arquivo direto (file://).
+    </p>`;
+  }
+
+  // ======================================================================
+  //  Entrega de arquivos (Google Drive ou download local)
+  // ======================================================================
+  // Envia ao Google Drive quando habilitado; senão (ou em caso de falha)
+  // baixa localmente. content = string ou Uint8Array.
+  function deliverFile(filename, content, mime, label) {
+    label = label || "Arquivo";
+    const drive = typeof DriveSync !== "undefined" ? DriveSync : null;
+    if (drive && drive.isEnabled()) {
+      toast("Enviando para o Google Drive…");
+      drive.upload(filename, content, mime)
+        .then(() => {
+          toast(label + " enviado ao Google Drive.", "success");
+          if (Store.getSettings().driveKeepLocal) downloadFile(filename, content, mime);
+        })
+        .catch((err) => {
+          console.error("Falha no envio ao Drive:", err);
+          toast("Falha ao enviar ao Drive — baixando localmente.", "danger");
+          downloadFile(filename, content, mime);
+        });
+      return;
+    }
+    downloadFile(filename, content, mime);
+    toast(label + " gerado.", "success");
   }
 
   // ======================================================================
