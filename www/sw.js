@@ -1,7 +1,7 @@
 /* ===========================================================================
    sw.js — service worker para uso offline (cache dos arquivos do app)
    =========================================================================== */
-const CACHE = "gerencia-prof-v2";
+const CACHE = "gerencia-prof-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const ASSETS = [
   "./js/docx.js",
   "./js/store.js",
   "./js/ui.js",
+  "./js/drive.js",
   "./js/app.js",
   "./manifest.json",
   "./img/icon.svg",

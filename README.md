@@ -23,6 +23,8 @@ dados, login ou mensalidade. Tudo funciona dentro do navegador e **offline**.
   **exportar em `.docx`** no mesmo template do modelo (com o timbre oficial).
 - **Imprimir / salvar em PDF** e **exportar CSV** do relatório de pendências.
 - **Backup e restauração** dos dados em arquivo `.json`.
+- **Envio das exportações para o Google Drive** (opcional): `.docx`, CSV e backup
+  vão direto para uma pasta no seu Drive, com acesso mínimo (`drive.file`).
 - Instalável como **app** no celular ou computador (PWA) e pronto para virar **APK** com Cordova.
 
 ---
@@ -133,6 +135,53 @@ Na tela de Backup também é possível **carregar dados de exemplo** para testar
 
 ---
 
+## ☁️ Enviar as exportações para o Google Drive (opcional)
+
+Dá para fazer o app **enviar automaticamente** as exportações (o `.docx` das
+observações, o CSV de pendências e o backup `.json`) para o **seu Google Drive**,
+sem backend e sem custo. O app usa o acesso **mínimo** (`drive.file`): ele só
+enxerga e gerencia **os arquivos que ele mesmo cria** — nunca o resto do seu Drive.
+
+> Requisitos: o app precisa ser aberto por **http/https** (via `npm start` ou
+> GitHub Pages). Não funciona abrindo o `index.html` como arquivo (`file://`).
+
+### Passo 1 — Criar as credenciais no Google Cloud (uma vez)
+
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/) e crie um
+   **projeto** (gratuito).
+2. Em **APIs e serviços → Biblioteca**, ative a **Google Drive API**.
+3. Em **APIs e serviços → Tela de permissão OAuth**:
+   - Tipo de usuário: **Externo**; preencha o nome do app e seu e-mail.
+   - Deixe em modo **Testes** e, em **Usuários de teste**, adicione **o seu
+     próprio e-mail** (assim funciona sem precisar de verificação do Google).
+4. Em **APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth**:
+   - Tipo: **Aplicativo da Web**.
+   - Em **Origens JavaScript autorizadas**, adicione o endereço onde você abre o
+     app, por exemplo `http://localhost:8080` e/ou a URL do seu GitHub Pages
+     (ex.: `https://seu-usuario.github.io`).
+   - Salve e **copie o Client ID** (algo como `123-abc.apps.googleusercontent.com`).
+
+### Passo 2 — Configurar no app
+
+Abra a tela **💾 Backup → ☁️ Google Drive** e:
+
+1. Cole o **Client ID**.
+2. Escolha a **pasta** de destino (padrão: `Gerência Prof`).
+3. Marque **“Enviar as exportações para o Google Drive”**.
+4. Clique em **Salvar configuração** e depois em **Conectar / testar** para
+   autorizar sua conta (abre a janela do Google).
+
+Pronto: a partir daí, ao exportar, o arquivo vai para a pasta escolhida no seu
+Drive. Se o envio falhar (sem internet, sessão expirada), o app **baixa o arquivo
+localmente** automaticamente, para você não perder nada. Há também a opção de
+**manter uma cópia local** junto com o envio.
+
+> Observação (APK/Cordova): o login do Google em WebView tem restrições. Essa
+> integração é pensada para o uso via **navegador/PWA** (localhost ou GitHub
+> Pages). Para APK, o fluxo de OAuth precisa de configuração adicional.
+
+---
+
 ## 🗂️ Estrutura do projeto
 
 ```
@@ -145,6 +194,7 @@ gerencia-prof/
 │   │   ├── ui.js           ← utilitários de interface (modal, toast, formatação)
 │   │   ├── docx.js         ← gerador de .docx (ZIP + OOXML, sem dependências)
 │   │   ├── letterhead.js   ← timbre oficial (imagem em base64) p/ o .docx
+│   │   ├── drive.js        ← envio das exportações ao Google Drive (opcional)
 │   │   └── app.js          ← telas e navegação
 │   ├── img/                ← ícones do app
 │   ├── manifest.json       ← configuração PWA

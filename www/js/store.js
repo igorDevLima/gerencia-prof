@@ -79,6 +79,42 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  // --- Configurações (integrações) ---------------------------------------
+  // Guardadas em chave separada, para não se misturarem aos dados nem sumirem
+  // quando o usuário "apaga todos os dados".
+  const SETTINGS_KEY = "gerencia-prof:settings";
+  const DEFAULT_SETTINGS = {
+    googleClientId: "",
+    driveEnabled: false,
+    driveFolder: "Gerência Prof",
+    driveKeepLocal: false,
+  };
+  let settings = loadSettings();
+
+  function loadSettings() {
+    try {
+      const raw = global.localStorage.getItem(SETTINGS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return Object.assign({}, DEFAULT_SETTINGS, parsed || {});
+    } catch (err) {
+      return Object.assign({}, DEFAULT_SETTINGS);
+    }
+  }
+
+  function getSettings() {
+    return Object.assign({}, DEFAULT_SETTINGS, settings);
+  }
+
+  function setSettings(patch) {
+    settings = Object.assign(getSettings(), patch || {});
+    try {
+      global.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (err) {
+      console.error("Falha ao salvar configurações:", err);
+    }
+    return getSettings();
+  }
+
   // --- Professores --------------------------------------------------------
   function getTeachers() {
     return clone(state.teachers).sort((a, b) =>
@@ -568,6 +604,8 @@
     deleteObservation, newObservationDraft, getObsDefaults,
     // relatórios
     getMonthlyReport, getMonthsWithTasks, getStats, taskMonth,
+    // configurações / integrações
+    getSettings, setSettings,
     // backup
     exportData, importData, clearAll, loadSampleData,
   };
