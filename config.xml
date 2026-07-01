@@ -14,8 +14,8 @@
     <allow-intent href="https://*/*" />
 
     <preference name="DisallowOverscroll" value="true" />
-    <preference name="BackgroundColor" value="0xfff1f5f9" />
-    <preference name="SplashMaintainAspectRatio" value="true" />
+    <!-- Cor no formato Android (#AARRGGBB). cordova-android 15+ não aceita 0x... -->
+    <preference name="BackgroundColor" value="#fff1f5f9" />
     <preference name="android-minSdkVersion" value="24" />
 
     <platform name="android">

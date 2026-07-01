@@ -14,6 +14,7 @@
     painel: { title: "Painel", render: renderDashboard },
     professores: { title: "Professores", render: renderTeachers },
     tarefas: { title: "Tarefas", render: renderTasks },
+    observacoes: { title: "Observação de aula", render: renderObservations },
     relatorios: { title: "Relatórios", render: renderReports },
     backup: { title: "Backup e dados", render: renderBackup },
   };
@@ -22,6 +23,8 @@
   const expandedTasks = new Set();
   let tasksFilterMonth = "";
   let reportsMonth = "";
+  // null = lista; "new" = nova observação; id = editando observação.
+  let editingObsId = null;
 
   // ======================================================================
   //  Roteamento
@@ -34,6 +37,8 @@
   function router() {
     const routeKey = currentRoute();
     const route = ROUTES[routeKey];
+    // Navegar pelo menu sempre mostra a lista de observações (fecha o formulário).
+    editingObsId = null;
     pageTitle.textContent = route.title;
     document.querySelectorAll("[data-route]").forEach((el) => {
       el.classList.toggle("active", el.getAttribute("data-route") === routeKey);
@@ -181,7 +186,7 @@
           <div class="item__head">
             <div>
               <h3 class="item__title">${escapeHtml(t.name)}</h3>
-              ${t.email ? `<div class="item__meta"><span>✉️ ${escapeHtml(t.email)}</span></div>` : ""}
+              ${(t.email || t.phone) ? `<div class="item__meta">${t.email ? `<span>✉️ ${escapeHtml(t.email)}</span>` : ""}${t.phone ? `<span>📱 ${escapeHtml(t.phone)}</span>` : ""}</div>` : ""}
             </div>
             <div class="item__actions">
               <button class="btn-icon" title="Editar" data-edit-teacher="${t.id}">✏️</button>
@@ -216,10 +221,18 @@
           <input class="input" id="tName" required maxlength="120"
                  value="${escapeHtml(teacher ? teacher.name : "")}" placeholder="Ex.: Maria Silva" />
         </div>
-        <div class="field">
-          <label for="tEmail">E-mail (opcional)</label>
-          <input class="input" id="tEmail" type="email" maxlength="160"
-                 value="${escapeHtml(teacher ? teacher.email : "")}" placeholder="maria@escola.edu" />
+        <div class="form-row">
+          <div class="field">
+            <label for="tEmail">E-mail (opcional)</label>
+            <input class="input" id="tEmail" type="email" maxlength="160"
+                   value="${escapeHtml(teacher ? teacher.email : "")}" placeholder="maria@escola.edu" />
+          </div>
+          <div class="field">
+            <label for="tPhone">WhatsApp (opcional)</label>
+            <input class="input" id="tPhone" type="tel" maxlength="30"
+                   value="${escapeHtml(teacher ? teacher.phone || "" : "")}" placeholder="Ex.: (27) 99999-8888" />
+            <div class="hint">Com DDD. Usado para enviar avisos pelo WhatsApp.</div>
+          </div>
         </div>
         <div class="field">
           <label for="tSubject">Matérias</label>
@@ -272,7 +285,8 @@
         const name = body.querySelector("#tName").value.trim();
         if (!name) { toast("Informe o nome do professor.", "danger"); return; }
         const email = body.querySelector("#tEmail").value.trim();
-        const payload = { name, email, subjects };
+        const phone = body.querySelector("#tPhone").value.trim();
+        const payload = { name, email, phone, subjects };
         if (id) { Store.updateTeacher(id, payload); toast("Professor atualizado.", "success"); }
         else { Store.addTeacher(payload); toast("Professor cadastrado.", "success"); }
         closeModal();
@@ -379,6 +393,8 @@
       ? `<span class="badge badge--muted">${escapeHtml(formatMonth(task.referenceMonth))}</span>` : "";
     const dueBadge = task.dueDate
       ? `<span class="badge badge--muted">Entrega: ${escapeHtml(formatDate(task.dueDate))}</span>` : "";
+    const ruleBadge = task.dueRule === "firstFriday"
+      ? `<span class="badge badge--info">1ª sexta do mês</span>` : "";
     const statusBadge = total === 0
       ? `<span class="badge badge--muted">Sem responsáveis</span>`
       : pending === 0
@@ -418,7 +434,7 @@
         <div class="item__head">
           <div style="min-width:0">
             <h3 class="item__title">${escapeHtml(task.title)}</h3>
-            <div class="item__meta">${typeBadge}${monthBadge}${dueBadge}${statusBadge}</div>
+            <div class="item__meta">${typeBadge}${monthBadge}${dueBadge}${ruleBadge}${statusBadge}</div>
           </div>
           <div class="item__actions">
             <button class="btn-icon" title="Editar" data-edit-task="${task.id}">✏️</button>
@@ -426,14 +442,17 @@
           </div>
         </div>
         ${task.description ? `<div class="item__body text-sm">${escapeHtml(task.description)}</div>` : ""}
-        <div class="flex between center" style="margin-top:12px;gap:12px">
-          <div class="grow">
+        <div class="flex between center wrap" style="margin-top:12px;gap:12px">
+          <div class="grow" style="min-width:180px">
             <div class="text-sm muted">${delivered}/${total} ${pluralize(total, "entrega", "entregas")} (${pct}%)</div>
             <div class="progress"><div class="progress__bar" style="width:${pct}%"></div></div>
           </div>
-          <button class="btn btn--ghost btn--sm" data-toggle-task="${task.id}">
-            ${expanded ? "Ocultar" : "Marcar entregas"}
-          </button>
+          <div class="flex gap wrap">
+            <button class="btn btn--ghost btn--sm" data-share-task="${task.id}">📲 Compartilhar</button>
+            <button class="btn btn--ghost btn--sm" data-toggle-task="${task.id}">
+              ${expanded ? "Ocultar" : "Marcar entregas"}
+            </button>
+          </div>
         </div>
         ${expanded ? `<div class="item__body">${deliveries}</div>` : ""}
       </div>`;
@@ -453,6 +472,8 @@
         else expandedTasks.add(tid);
         refreshTaskCard(tid, teachers);
       }));
+    view.querySelectorAll("[data-share-task]").forEach((b) =>
+      b.addEventListener("click", () => openShareModal(b.getAttribute("data-share-task"))));
     view.querySelectorAll("[data-delivery]").forEach((chk) =>
       chk.addEventListener("change", () => {
         const [taskId, teacherId] = chk.getAttribute("data-delivery").split("|");
@@ -492,6 +513,8 @@
         else expandedTasks.add(tid);
         refreshTaskCard(tid, teachers);
       }));
+    card.querySelectorAll("[data-share-task]").forEach((b) =>
+      b.addEventListener("click", () => openShareModal(b.getAttribute("data-share-task"))));
     card.querySelectorAll("[data-delivery]").forEach((chk) =>
       chk.addEventListener("change", () => {
         const [taskId, teacherId] = chk.getAttribute("data-delivery").split("|");
@@ -534,6 +557,12 @@
             <input class="input" id="kDue" type="date" value="${escapeHtml(task ? task.dueDate : "")}" />
           </div>
         </div>
+        <div class="field" id="firstFridayField" ${isMonthly ? "" : 'style="display:none"'}>
+          <label class="checkbox-row">
+            <input type="checkbox" id="kFirstFriday" ${task && task.dueRule === "firstFriday" ? "checked" : ""} />
+            <span>Entrega sempre na <strong>sexta-feira da primeira semana do mês</strong> (a data é calculada automaticamente)</span>
+          </label>
+        </div>
         <div class="field">
           <div class="flex between center">
             <label class="mb-0">Professores responsáveis</label>
@@ -561,9 +590,35 @@
       body.querySelector("[data-close-modal]").addEventListener("click", closeModal);
       const typeSel = body.querySelector("#kType");
       const monthField = body.querySelector("#monthField");
-      typeSel.addEventListener("change", () => {
-        monthField.style.display = typeSel.value === "monthly" ? "" : "none";
-      });
+      const monthInput = body.querySelector("#kMonth");
+      const dueInput = body.querySelector("#kDue");
+      const fridayField = body.querySelector("#firstFridayField");
+      const fridayChk = body.querySelector("#kFirstFriday");
+
+      // Quando a regra "1ª sexta" está ativa, calcula a data e trava o campo.
+      function applyFirstFriday() {
+        if (typeSel.value === "monthly" && fridayChk.checked) {
+          const d = Store.firstFridayOf(monthInput.value);
+          if (d) dueInput.value = d;
+          dueInput.readOnly = true;
+          dueInput.style.opacity = "0.6";
+        } else {
+          dueInput.readOnly = false;
+          dueInput.style.opacity = "";
+        }
+      }
+      function syncType() {
+        const monthly = typeSel.value === "monthly";
+        monthField.style.display = monthly ? "" : "none";
+        fridayField.style.display = monthly ? "" : "none";
+        if (!monthly) fridayChk.checked = false;
+        applyFirstFriday();
+      }
+      typeSel.addEventListener("change", syncType);
+      fridayChk.addEventListener("change", applyFirstFriday);
+      monthInput.addEventListener("change", applyFirstFriday);
+      applyFirstFriday();
+
       const checks = () => Array.from(body.querySelectorAll('#teacherChecks input[type="checkbox"]'));
       body.querySelector("#selAll").addEventListener("click", () => checks().forEach((c) => (c.checked = true)));
       body.querySelector("#selNone").addEventListener("click", () => checks().forEach((c) => (c.checked = false)));
@@ -583,6 +638,7 @@
           type,
           referenceMonth,
           dueDate: body.querySelector("#kDue").value,
+          dueRule: type === "monthly" && fridayChk.checked ? "firstFriday" : "",
           teacherIds: checks().filter((c) => c.checked).map((c) => c.value),
         };
         if (id) { Store.updateTask(id, payload); toast("Tarefa atualizada.", "success"); }
@@ -607,6 +663,129 @@
     expandedTasks.delete(id);
     toast("Tarefa excluída.", "success");
     renderTasks();
+  }
+
+  // ---------------------------------------------- Compartilhar (WhatsApp)
+  // Saudação conforme o horário atual.
+  function greetingNow() {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  }
+
+  // Texto da data final de entrega da tarefa (ou referência mensal).
+  function taskDueText(task) {
+    if (task.dueDate) return { text: formatDate(task.dueDate), hasDate: true };
+    if (task.type === "monthly" && task.referenceMonth) {
+      return { text: formatMonth(task.referenceMonth).toLowerCase(), hasDate: false };
+    }
+    return { text: "", hasDate: false };
+  }
+
+  // Monta a mensagem profissional (sem emojis) para o WhatsApp.
+  function buildShareMessage(task, teacherName) {
+    const g = greetingNow();
+    const who = teacherName ? teacherName.trim() : "professor(a)";
+    const due = taskDueText(task);
+    const lines = [];
+    lines.push(`${g}, ${who}.`);
+    lines.push("");
+    if (due.hasDate) {
+      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}", cujo prazo final é ${due.text}.`);
+    } else if (due.text) {
+      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}", referente ao mês de ${due.text}.`);
+    } else {
+      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}".`);
+    }
+    lines.push("");
+    lines.push("Por gentileza, realize o envio dentro do prazo. Caso já tenha entregado, favor desconsiderar esta mensagem.");
+    lines.push("");
+    lines.push("Atenciosamente,");
+    lines.push("Coordenação.");
+    return lines.join("\n");
+  }
+
+  // Normaliza o telefone para o formato do WhatsApp (só dígitos, com DDI).
+  function normalizeWhatsPhone(raw) {
+    let d = String(raw || "").replace(/\D/g, "");
+    if (!d) return "";
+    if (d.length <= 11) d = "55" + d; // acrescenta o DDI do Brasil se veio só com DDD
+    return d;
+  }
+
+  function waLink(phone, text) {
+    const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
+    return base + "?text=" + encodeURIComponent(text);
+  }
+
+  function openShareModal(taskId) {
+    const task = Store.getTask(taskId);
+    if (!task) return;
+    const teacherMap = new Map(Store.getTeachers().map((t) => [t.id, t]));
+    const assigned = task.assignments.map((a) => teacherMap.get(a.teacherId)).filter(Boolean);
+    const genericMsg = buildShareMessage(task, "");
+
+    let teacherRows;
+    if (!assigned.length) {
+      teacherRows = `<p class="muted text-sm">Nenhum professor atribuído a esta tarefa. Edite a tarefa para adicionar responsáveis.</p>`;
+    } else {
+      teacherRows = assigned.map((t) => {
+        const phone = normalizeWhatsPhone(t.phone);
+        if (phone) {
+          const msg = buildShareMessage(task, t.name);
+          return `
+            <div class="delivery">
+              <div class="delivery__info">
+                <div class="delivery__name">${escapeHtml(t.name)}</div>
+                <div class="delivery__sub">${escapeHtml(t.phone)}</div>
+              </div>
+              <a class="btn btn--sm" target="_blank" rel="noopener" href="${escapeHtml(waLink(phone, msg))}">Enviar</a>
+            </div>`;
+        }
+        return `
+          <div class="delivery">
+            <div class="delivery__info">
+              <div class="delivery__name">${escapeHtml(t.name)}</div>
+              <div class="delivery__sub muted">Sem WhatsApp cadastrado</div>
+            </div>
+            <button class="btn btn--ghost btn--sm" data-add-phone="${t.id}">Adicionar</button>
+          </div>`;
+      }).join("");
+    }
+
+    const html = `
+      <div class="field">
+        <label for="shareMsg">Mensagem</label>
+        <textarea class="textarea" id="shareMsg" rows="9">${escapeHtml(genericMsg)}</textarea>
+        <div class="hint">A saudação muda conforme o horário (bom dia / boa tarde / boa noite). Você pode editar antes de enviar.</div>
+      </div>
+      <div class="flex gap wrap" style="margin-bottom:4px">
+        <button class="btn btn--ghost" id="copyMsg" type="button">Copiar mensagem</button>
+        <button class="btn" id="openWa" type="button">Abrir no WhatsApp</button>
+      </div>
+      <hr class="divider">
+      <h3 class="mt-0" style="font-size:1rem">Enviar direto para cada professor</h3>
+      <p class="muted text-sm mt-0">Cada mensagem é personalizada com o nome do professor.</p>
+      <div class="list">${teacherRows}</div>`;
+
+    openModal("Compartilhar tarefa no WhatsApp", html, (body) => {
+      body.querySelector("#copyMsg").addEventListener("click", async () => {
+        const ok = await UI.copyText(body.querySelector("#shareMsg").value);
+        toast(ok ? "Mensagem copiada." : "Não foi possível copiar.", ok ? "success" : "danger");
+      });
+      body.querySelector("#openWa").addEventListener("click", () => {
+        const text = body.querySelector("#shareMsg").value;
+        global.open(waLink("", text), "_blank", "noopener");
+      });
+      body.querySelectorAll("[data-add-phone]").forEach((b) =>
+        b.addEventListener("click", () => {
+          const tid = b.getAttribute("data-add-phone");
+          closeModal();
+          navigate("professores");
+          openTeacherForm(tid);
+        }));
+    });
   }
 
   // ======================================================================
@@ -735,6 +914,363 @@
   }
 
   // ======================================================================
+  //  Observação de Aula
+  // ======================================================================
+  function renderObservations() {
+    if (editingObsId) renderObsForm();
+    else renderObsList();
+  }
+
+  function markSummary(o) {
+    const c = { sim: 0, nao: 0, na: 0, vazio: 0 };
+    (o.criterios || []).forEach((x) => {
+      if (x.mark === "sim") c.sim++;
+      else if (x.mark === "nao") c.nao++;
+      else if (x.mark === "na") c.na++;
+      else c.vazio++;
+    });
+    return c;
+  }
+
+  function renderObsList() {
+    view.scrollTop = 0;
+    const observations = Store.getObservations();
+    let html = `
+      <div class="section-head">
+        <div>
+          <h2 class="mt-0 mb-0">Observação de Aula</h2>
+          <p>Assista à aula, preencha o protocolo e exporte no template oficial (.docx).</p>
+        </div>
+        <button class="btn" data-new-obs>+ Nova observação</button>
+      </div>`;
+
+    if (!observations.length) {
+      html += emptyCard("👁️", "Nenhuma observação registrada",
+        "Registre a observação de uma aula e exporte o documento .docx no mesmo template do modelo oficial.",
+        `<button class="btn" data-new-obs>Nova observação</button>`);
+      view.innerHTML = html;
+      bindObsListActions();
+      return;
+    }
+
+    html += `<div class="list">`;
+    observations.forEach((o) => {
+      const s = markSummary(o);
+      const meta = [
+        o.disciplina,
+        o.serieTurma,
+        (formatDate(o.dataObservacao) || "") + (o.horario ? ` (${o.horario})` : ""),
+      ].filter((x) => x && x.trim());
+      html += `
+        <div class="item">
+          <div class="item__head">
+            <div style="min-width:0">
+              <h3 class="item__title">${escapeHtml(o.professor || "(sem professor)")}</h3>
+              <div class="item__meta">${meta.map((m) => `<span>${escapeHtml(m)}</span>`).join("")}</div>
+            </div>
+            <div class="item__actions">
+              <button class="btn-icon" title="Editar" data-edit-obs="${o.id}">✏️</button>
+              <button class="btn-icon btn-icon--danger" title="Excluir" data-del-obs="${o.id}">🗑️</button>
+            </div>
+          </div>
+          <div class="item__body flex gap wrap center">
+            <span class="badge badge--success">Sim: ${s.sim}</span>
+            <span class="badge badge--danger">Não: ${s.nao}</span>
+            <span class="badge badge--muted">N/D: ${s.na}</span>
+            ${s.vazio ? `<span class="badge badge--pending">Em branco: ${s.vazio}</span>` : ""}
+            <span class="grow"></span>
+            <button class="btn btn--sm" data-export-obs="${o.id}">⬇️ Exportar .docx</button>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+    view.innerHTML = html;
+    bindObsListActions();
+  }
+
+  function bindObsListActions() {
+    view.querySelectorAll("[data-new-obs]").forEach((b) =>
+      b.addEventListener("click", () => { editingObsId = "new"; renderObservations(); }));
+    view.querySelectorAll("[data-edit-obs]").forEach((b) =>
+      b.addEventListener("click", () => { editingObsId = b.getAttribute("data-edit-obs"); renderObservations(); }));
+    view.querySelectorAll("[data-del-obs]").forEach((b) =>
+      b.addEventListener("click", () => deleteObservationFlow(b.getAttribute("data-del-obs"))));
+    view.querySelectorAll("[data-export-obs]").forEach((b) =>
+      b.addEventListener("click", () => exportObservationDocx(b.getAttribute("data-export-obs"))));
+  }
+
+  function renderObsForm() {
+    view.scrollTop = 0;
+    const isNew = editingObsId === "new";
+    const obs = isNew ? Store.newObservationDraft() : Store.getObservation(editingObsId);
+    if (!obs) { editingObsId = null; renderObsList(); return; }
+    pageTitle.textContent = isNew ? "Nova observação" : "Editar observação";
+
+    const teachers = Store.getTeachers();
+    const allSubjects = Array.from(new Set(teachers.flatMap((t) => t.subjects || [])))
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const CRITERIA = DocxExport.CRITERIA;
+    const GUIDANCE = DocxExport.GUIDANCE;
+
+    const teacherOpts = `<option value="">— Selecione um cadastrado —</option>` +
+      teachers.map((t) => `<option value="${t.id}" ${obs.teacherId === t.id ? "selected" : ""}>${escapeHtml(t.name)}</option>`).join("") +
+      `<option value="__manual__">Outro (digitar manualmente)</option>`;
+
+    const critBlocks = CRITERIA.map((text, i) => {
+      const d = obs.criterios[i] || { mark: "", evidencias: "" };
+      const lab = (val, cls, label) =>
+        `<label class="radio radio--${cls}${d.mark === val ? " radio--on" : ""}">
+           <input type="radio" name="crit-${i}" value="${val}" ${d.mark === val ? "checked" : ""}><span>${label}</span>
+         </label>`;
+      return `
+        <div class="obs-crit" data-crit="${i}">
+          <div class="obs-crit__text">${i + 1}. ${escapeHtml(text)}</div>
+          <div class="obs-crit__marks">
+            ${lab("sim", "sim", "Sim")}
+            ${lab("nao", "nao", "Não")}
+            ${lab("na", "na", "Não foi possível observar")}
+            <button type="button" class="linklike" data-clear-crit="${i}">limpar</button>
+          </div>
+          <textarea class="textarea" id="ev-${i}" rows="2" placeholder="${escapeHtml(GUIDANCE[i] || "Indicadores / evidências…")}">${escapeHtml(d.evidencias)}</textarea>
+        </div>`;
+    }).join("");
+
+    const field = (id, label, value, type, ph) =>
+      `<div class="field"><label for="${id}">${label}</label>
+        <input class="input" id="${id}" ${type ? `type="${type}"` : ""} value="${escapeHtml(value || "")}" ${ph ? `placeholder="${escapeHtml(ph)}"` : ""}/></div>`;
+
+    view.innerHTML = `
+      <div class="section-head no-print">
+        <div>
+          <h2 class="mt-0 mb-0">${isNew ? "Nova observação de aula" : "Editar observação"}</h2>
+          <p>Preencha o protocolo. Ao final, exporte no template oficial (.docx).</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" data-cancel-obs>← Voltar</button>
+      </div>
+
+      <div class="card"><div class="card__body">
+        <h2 class="mt-0">1. Identificação</h2>
+        <div class="form-row">
+          <div class="field">
+            <label for="obsTeacher">Professor(a) observado(a)</label>
+            <select class="select" id="obsTeacher">${teacherOpts}</select>
+            <div class="hint">Escolha um cadastrado (preenche o nome) ou digite ao lado.</div>
+          </div>
+          ${field("obsProfessor", "Nome do professor(a) *", obs.professor, "", "Ex.: Maria Silva")}
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="obsDisciplina">Disciplina</label>
+            <input class="input" id="obsDisciplina" list="discList" value="${escapeHtml(obs.disciplina || "")}" placeholder="Ex.: Desenvolvimento Web"/>
+            <datalist id="discList">${allSubjects.map((s) => `<option value="${escapeHtml(s)}"></option>`).join("")}</datalist>
+          </div>
+          ${field("obsSerie", "Série/Turma", obs.serieTurma, "", "Ex.: 2º Ano — Turma B")}
+        </div>
+        <div class="form-row">
+          ${field("obsData", "Data da observação *", obs.dataObservacao, "date")}
+          ${field("obsHorario", "Horário", obs.horario, "", "Ex.: 15h-15h50")}
+        </div>
+        <details class="obs-advanced">
+          <summary>Dados do cabeçalho (escola, etapa, modalidade…)</summary>
+          ${field("hdrEscola", "Escola", obs.escola)}
+          <div class="form-row">
+            ${field("hdrEtapa", "Etapa", obs.etapa)}
+            ${field("hdrTurno", "Turno", obs.turno, "", "Ex.: Vespertino")}
+          </div>
+          ${field("hdrModalidade", "Modalidade", obs.modalidade)}
+          ${field("hdrArea", "Área de Conhecimento / Área Técnica", obs.area)}
+          <div class="form-row">
+            ${field("hdrCoordPed", "Coordenadora Pedagógica", obs.coordenadoraPedagogica)}
+            ${field("hdrCoordArea", "Coord. de Área / Curso Técnico", obs.coordenadorArea)}
+          </div>
+          <div class="hint">Estes dados são lembrados para as próximas observações.</div>
+        </details>
+      </div></div>
+
+      <div class="card"><div class="card__body">
+        <h2 class="mt-0">2. Protocolo de Observação</h2>
+        <p class="muted text-sm">Para cada critério, marque <strong>Sim / Não / Não foi possível observar</strong> e registre as evidências.</p>
+        ${critBlocks}
+        <div class="field" style="margin-top:16px">
+          <label for="obsObservacoes">Observações gerais</label>
+          <textarea class="textarea" id="obsObservacoes" rows="3" placeholder="Registros gerais da aula…">${escapeHtml(obs.observacoes || "")}</textarea>
+        </div>
+      </div></div>
+
+      <div class="card"><div class="card__body">
+        <h2 class="mt-0">3. Protocolo do Feedback</h2>
+        <div class="field">
+          <label for="obsRegistro">Registro de Evidências</label>
+          <textarea class="textarea" id="obsRegistro" rows="3">${escapeHtml(obs.registroEvidencias || "")}</textarea>
+        </div>
+        <div class="field">
+          <label for="obsSugestoes">Sugestões/Orientações</label>
+          <textarea class="textarea" id="obsSugestoes" rows="4" placeholder="${escapeHtml(DocxExport.FEEDBACK_HINTS)}">${escapeHtml(obs.sugestoes || "")}</textarea>
+        </div>
+        <div class="field" style="max-width:260px">
+          <label for="obsDataFeedback">Data do Feedback</label>
+          <input class="input" type="date" id="obsDataFeedback" value="${escapeHtml(obs.dataFeedback || "")}"/>
+        </div>
+        <hr class="divider">
+        <h3 class="mt-0">Assinaturas (opcional)</h3>
+        <p class="muted text-sm">Os nomes aparecem acima da linha de assinatura no documento exportado.</p>
+        <div class="form-row">
+          ${field("sigRegente", "Professor(a) Regente", (obs.assinaturas || {}).regente)}
+          ${field("sigCoordArea", "Coord. de Área / Curso Técnico", (obs.assinaturas || {}).coordenadorArea)}
+        </div>
+        <div class="form-row">
+          ${field("sigPedagoga", "Pedagoga", (obs.assinaturas || {}).pedagoga)}
+          ${field("sigCoordPed", "Coordenadora Pedagógica", (obs.assinaturas || {}).coordenadoraPedagogica)}
+        </div>
+      </div></div>
+
+      <div class="card"><div class="card__body flex gap wrap between center">
+        <button class="btn btn--ghost" data-cancel-obs>← Voltar sem salvar</button>
+        <div class="flex gap wrap">
+          <button class="btn btn--ghost" data-save-obs>Salvar</button>
+          <button class="btn" data-save-export-obs>💾 Salvar e exportar .docx</button>
+        </div>
+      </div></div>`;
+
+    bindObsForm(teachers, allSubjects);
+  }
+
+  function bindObsForm(teachers, allSubjects) {
+    const teacherSel = view.querySelector("#obsTeacher");
+    teacherSel.addEventListener("change", () => {
+      const t = teachers.find((x) => x.id === teacherSel.value);
+      if (t) view.querySelector("#obsProfessor").value = t.name;
+      const dl = view.querySelector("#discList");
+      const subs = t && t.subjects && t.subjects.length ? t.subjects : allSubjects;
+      dl.innerHTML = subs.map((s) => `<option value="${escapeHtml(s)}"></option>`).join("");
+    });
+
+    view.querySelectorAll("[data-crit]").forEach((block) => {
+      const i = block.getAttribute("data-crit");
+      block.querySelectorAll(`input[name="crit-${i}"]`).forEach((radio) =>
+        radio.addEventListener("change", () => updateCritLabels(block)));
+      const clr = block.querySelector("[data-clear-crit]");
+      clr.addEventListener("click", () => {
+        block.querySelectorAll(`input[name="crit-${i}"]`).forEach((r) => (r.checked = false));
+        updateCritLabels(block);
+      });
+    });
+
+    view.querySelectorAll("[data-cancel-obs]").forEach((b) =>
+      b.addEventListener("click", () => { editingObsId = null; renderObservations(); }));
+    view.querySelector("[data-save-obs]").addEventListener("click", () => saveObservation(false));
+    view.querySelector("[data-save-export-obs]").addEventListener("click", () => saveObservation(true));
+  }
+
+  function updateCritLabels(block) {
+    block.querySelectorAll(".radio").forEach((label) => {
+      const input = label.querySelector("input");
+      label.classList.toggle("radio--on", !!(input && input.checked));
+    });
+  }
+
+  function collectObsPayload() {
+    const val = (id) => { const el = view.querySelector("#" + id); return el ? el.value : ""; };
+    const teacherSel = view.querySelector("#obsTeacher");
+    const teacherId = teacherSel && /^t_/.test(teacherSel.value) ? teacherSel.value : "";
+    const criterios = [];
+    for (let i = 0; i < DocxExport.CRITERIA.length; i++) {
+      const checked = view.querySelector(`input[name="crit-${i}"]:checked`);
+      criterios.push({ mark: checked ? checked.value : "", evidencias: val("ev-" + i) });
+    }
+    return {
+      teacherId,
+      professor: val("obsProfessor"),
+      disciplina: val("obsDisciplina"),
+      serieTurma: val("obsSerie"),
+      dataObservacao: val("obsData"),
+      horario: val("obsHorario"),
+      escola: val("hdrEscola"),
+      etapa: val("hdrEtapa"),
+      modalidade: val("hdrModalidade"),
+      turno: val("hdrTurno"),
+      area: val("hdrArea"),
+      coordenadoraPedagogica: val("hdrCoordPed"),
+      coordenadorArea: val("hdrCoordArea"),
+      criterios,
+      observacoes: val("obsObservacoes"),
+      registroEvidencias: val("obsRegistro"),
+      sugestoes: val("obsSugestoes"),
+      dataFeedback: val("obsDataFeedback"),
+      assinaturas: {
+        regente: val("sigRegente"),
+        coordenadorArea: val("sigCoordArea"),
+        pedagoga: val("sigPedagoga"),
+        coordenadoraPedagogica: val("sigCoordPed"),
+      },
+    };
+  }
+
+  function saveObservation(exportAfter) {
+    const payload = collectObsPayload();
+    if (!payload.professor.trim()) { toast("Informe o nome do professor(a).", "danger"); return; }
+    if (!payload.dataObservacao) { toast("Informe a data da observação.", "danger"); return; }
+    let saved;
+    if (editingObsId && editingObsId !== "new") saved = Store.updateObservation(editingObsId, payload);
+    else saved = Store.addObservation(payload);
+    if (!saved) { toast("Não foi possível salvar.", "danger"); return; }
+    toast("Observação salva.", "success");
+    if (exportAfter) exportObservationDocx(saved.id);
+    editingObsId = null;
+    renderObservations();
+  }
+
+  async function deleteObservationFlow(id) {
+    const obs = Store.getObservation(id);
+    if (!obs) return;
+    const ok = await confirmDialog({
+      title: "Excluir observação",
+      message: `Excluir a observação de "${obs.professor || "(sem professor)"}"${obs.dataObservacao ? " de " + formatDate(obs.dataObservacao) : ""}? Esta ação não pode ser desfeita.`,
+      confirmText: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
+    Store.deleteObservation(id);
+    toast("Observação excluída.", "success");
+    renderObservations();
+  }
+
+  function obsSlug(s) {
+    return String(s || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+      .toLowerCase().slice(0, 40) || "professor";
+  }
+
+  function obsFilename(obs) {
+    return `observacao-aula-${obsSlug(obs.professor)}-${obs.dataObservacao || "sem-data"}.docx`;
+  }
+
+  function exportObservationDocx(id) {
+    const obs = Store.getObservation(id);
+    if (!obs) { toast("Observação não encontrada.", "danger"); return; }
+    if (typeof DocxExport === "undefined" || !DocxExport.buildDocx) {
+      toast("Módulo de exportação indisponível.", "danger");
+      return;
+    }
+    const lh = global.LETTERHEAD_JPEG_BASE64
+      ? { base64: global.LETTERHEAD_JPEG_BASE64, w: global.LETTERHEAD_JPEG_W || 726, h: global.LETTERHEAD_JPEG_H || 144 }
+      : null;
+    try {
+      const bytes = DocxExport.buildDocx(obs, { letterhead: lh });
+      UI.downloadFile(
+        obsFilename(obs),
+        bytes,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      );
+      toast("Documento .docx gerado.", "success");
+    } catch (err) {
+      console.error("Falha ao gerar .docx:", err);
+      toast("Falha ao gerar o documento .docx.", "danger");
+    }
+  }
+
+  // ======================================================================
   //  Backup e dados
   // ======================================================================
   function renderBackup() {
@@ -757,7 +1293,8 @@
         </p>
         <p class="text-sm muted mb-0">
           Atualmente: ${s.teachers} ${pluralize(s.teachers, "professor", "professores")},
-          ${s.tasks} ${pluralize(s.tasks, "tarefa", "tarefas")}.
+          ${s.tasks} ${pluralize(s.tasks, "tarefa", "tarefas")},
+          ${s.observations} ${pluralize(s.observations, "observação", "observações")}.
         </p>
       </div></div>
 
