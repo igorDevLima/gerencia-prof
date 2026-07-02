@@ -16,11 +16,18 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "cordova-android": "^15.0.0"
+    "cordova-android": "^15.0.0",
+    "cordova-plugin-webpack": "^1.0.5",
+    "webpack": "^4.47.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.3"
   },
   "cordova": {
     "platforms": [
       "android"
-    ]
+    ],
+    "plugins": {
+      "cordova-plugin-webpack": {}
+    }
   }
 }

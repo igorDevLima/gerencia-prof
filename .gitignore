@@ -1,5 +1,6 @@
 # Dependências (não usadas, mas evita commits acidentais)
 node_modules/
+package-lock.json
 
 # Artefatos de build do Cordova
 platforms/
