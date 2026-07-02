@@ -7,6 +7,20 @@
     "start": "node server.js",
     "serve": "node server.js"
   },
-  "keywords": ["professores", "tarefas", "escola", "cordova", "pwa"],
-  "license": "MIT"
+  "keywords": [
+    "professores",
+    "tarefas",
+    "escola",
+    "cordova",
+    "pwa"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "cordova-android": "^15.0.0"
+  },
+  "cordova": {
+    "platforms": [
+      "android"
+    ]
+  }
 }
