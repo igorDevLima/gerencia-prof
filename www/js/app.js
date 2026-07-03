@@ -1,11 +1,24 @@
+import { createButton } from "../shared/ui-components/button";
+
 /* ===========================================================================
    app.js — roteador + telas (painel, professores, tarefas, relatórios, backup)
    =========================================================================== */
 (function (global) {
   "use strict";
 
-  const { escapeHtml, formatMonth, formatDate, formatDateTime, pluralize, toast,
-          openModal, closeModal, onModalClose, confirmDialog, downloadFile } = global.UI;
+  const {
+    escapeHtml,
+    formatMonth,
+    formatDate,
+    formatDateTime,
+    pluralize,
+    toast,
+    openModal,
+    closeModal,
+    onModalClose,
+    confirmDialog,
+    downloadFile,
+  } = global.UI;
 
   const view = document.getElementById("view");
   const pageTitle = document.getElementById("pageTitle");
@@ -81,14 +94,29 @@
         </div>
       </div>`;
 
+    addTeacherButton = createButton({
+      label: "Cadastrar professores",
+      dataGo: "professores",
+    });
+
     if (s.teachers === 0) {
-      html += emptyCard("👋", "Bem-vindo!",
+      html += emptyCard(
+        "👋",
+        "Bem-vindo!",
         "Comece cadastrando seus professores e as matérias que cada um leciona.",
-        `<button class="btn" data-go="professores">Cadastrar professores</button>`);
+        addTeacherButton().outerHTML,
+      );
       view.innerHTML = html;
       bindGoButtons();
       return;
     }
+
+    viewReportsButton = createButton({
+      label: "Ver relatório completo",
+      variant: "ghost",
+      dataGo: "relatorios",
+      size: "sm",
+    });
 
     // Resumo do mês atual.
     html += `
@@ -99,14 +127,16 @@
               <h2 class="mt-0 mb-0">Situação de ${escapeHtml(formatMonth(s.currentMonth))}</h2>
               <p>Entregas das tarefas com referência neste mês.</p>
             </div>
-            <button class="btn btn--ghost btn--sm" data-go="relatorios">Ver relatório completo →</button>
+            ${viewReportsButton().outerHTML}
           </div>
           ${renderMonthSummary(report)}
         </div>
       </div>`;
 
     // Próximas pendências (até 5 tarefas com pendência).
-    const tasksWithPending = report.tasks.filter((t) => t.pendingCount > 0).slice(0, 5);
+    const tasksWithPending = report.tasks
+      .filter((t) => t.pendingCount > 0)
+      .slice(0, 5);
     if (tasksWithPending.length) {
       html += `<div class="card"><div class="card__body">
         <h2 class="mt-0">Tarefas com pendências este mês</h2>
@@ -168,9 +198,12 @@
       </div>`;
 
     if (teachers.length === 0) {
-      html += emptyCard("👩‍🏫", "Nenhum professor ainda",
+      html += emptyCard(
+        "👩‍🏫",
+        "Nenhum professor ainda",
         "Cadastre os professores e informe as matérias que cada um leciona.",
-        `<button class="btn" data-new-teacher>Cadastrar professor</button>`);
+        `<button class="btn" data-new-teacher>Cadastrar professor</button>`,
+      );
       view.innerHTML = html;
       bindTeacherActions();
       return;
@@ -186,7 +219,7 @@
           <div class="item__head">
             <div>
               <h3 class="item__title">${escapeHtml(t.name)}</h3>
-              ${(t.email || t.phone) ? `<div class="item__meta">${t.email ? `<span>✉️ ${escapeHtml(t.email)}</span>` : ""}${t.phone ? `<span>📱 ${escapeHtml(t.phone)}</span>` : ""}</div>` : ""}
+              ${t.email || t.phone ? `<div class="item__meta">${t.email ? `<span>✉️ ${escapeHtml(t.email)}</span>` : ""}${t.phone ? `<span>📱 ${escapeHtml(t.phone)}</span>` : ""}</div>` : ""}
             </div>
             <div class="item__actions">
               <button class="btn-icon" title="Editar" data-edit-teacher="${t.id}">✏️</button>
@@ -202,12 +235,23 @@
   }
 
   function bindTeacherActions() {
-    view.querySelectorAll("[data-new-teacher]").forEach((b) =>
-      b.addEventListener("click", () => openTeacherForm()));
-    view.querySelectorAll("[data-edit-teacher]").forEach((b) =>
-      b.addEventListener("click", () => openTeacherForm(b.getAttribute("data-edit-teacher"))));
-    view.querySelectorAll("[data-del-teacher]").forEach((b) =>
-      b.addEventListener("click", () => deleteTeacherFlow(b.getAttribute("data-del-teacher"))));
+    view
+      .querySelectorAll("[data-new-teacher]")
+      .forEach((b) => b.addEventListener("click", () => openTeacherForm()));
+    view
+      .querySelectorAll("[data-edit-teacher]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          openTeacherForm(b.getAttribute("data-edit-teacher")),
+        ),
+      );
+    view
+      .querySelectorAll("[data-del-teacher]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          deleteTeacherFlow(b.getAttribute("data-del-teacher")),
+        ),
+      );
   }
 
   function openTeacherForm(id) {
@@ -251,24 +295,33 @@
       </form>`;
 
     openModal(id ? "Editar professor" : "Novo professor", html, (body) => {
-      body.querySelector("[data-close-modal]").addEventListener("click", closeModal);
+      body
+        .querySelector("[data-close-modal]")
+        .addEventListener("click", closeModal);
       const tagsEl = body.querySelector("#subjectTags");
       const subjectInput = body.querySelector("#tSubject");
 
       function renderTags() {
-        tagsEl.innerHTML = subjects.map((s, i) =>
-          `<span class="tag">${escapeHtml(s)}<button type="button" class="tag__remove" data-rm="${i}" aria-label="Remover">×</button></span>`
-        ).join("");
+        tagsEl.innerHTML = subjects
+          .map(
+            (s, i) =>
+              `<span class="tag">${escapeHtml(s)}<button type="button" class="tag__remove" data-rm="${i}" aria-label="Remover">×</button></span>`,
+          )
+          .join("");
         tagsEl.querySelectorAll("[data-rm]").forEach((btn) =>
           btn.addEventListener("click", () => {
             subjects.splice(Number(btn.getAttribute("data-rm")), 1);
             renderTags();
-          }));
+          }),
+        );
       }
       function addSubject() {
         const val = subjectInput.value.trim();
         if (!val) return;
-        const exists = subjects.some((s) => s.toLocaleLowerCase("pt-BR") === val.toLocaleLowerCase("pt-BR"));
+        const exists = subjects.some(
+          (s) =>
+            s.toLocaleLowerCase("pt-BR") === val.toLocaleLowerCase("pt-BR"),
+        );
         if (!exists) subjects.push(val);
         subjectInput.value = "";
         subjectInput.focus();
@@ -276,19 +329,30 @@
       }
       body.querySelector("#addSubject").addEventListener("click", addSubject);
       subjectInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSubject(); }
+        if (e.key === "Enter" || e.key === ",") {
+          e.preventDefault();
+          addSubject();
+        }
       });
       renderTags();
 
       body.querySelector("#teacherForm").addEventListener("submit", (e) => {
         e.preventDefault();
         const name = body.querySelector("#tName").value.trim();
-        if (!name) { toast("Informe o nome do professor.", "danger"); return; }
+        if (!name) {
+          toast("Informe o nome do professor.", "danger");
+          return;
+        }
         const email = body.querySelector("#tEmail").value.trim();
         const phone = body.querySelector("#tPhone").value.trim();
         const payload = { name, email, phone, subjects };
-        if (id) { Store.updateTeacher(id, payload); toast("Professor atualizado.", "success"); }
-        else { Store.addTeacher(payload); toast("Professor cadastrado.", "success"); }
+        if (id) {
+          Store.updateTeacher(id, payload);
+          toast("Professor atualizado.", "success");
+        } else {
+          Store.addTeacher(payload);
+          toast("Professor cadastrado.", "success");
+        }
         closeModal();
         renderTeachers();
       });
@@ -299,7 +363,9 @@
     const teacher = Store.getTeacher(id);
     if (!teacher) return;
     const tasks = Store.getTasks();
-    const inTasks = tasks.filter((t) => t.assignments.some((a) => a.teacherId === id)).length;
+    const inTasks = tasks.filter((t) =>
+      t.assignments.some((a) => a.teacherId === id),
+    ).length;
     const extra = inTasks
       ? ` Ele será removido de ${inTasks} ${pluralize(inTasks, "tarefa", "tarefas")}.`
       : "";
@@ -333,17 +399,23 @@
       </div>`;
 
     if (teachers.length === 0) {
-      html += emptyCard("📝", "Cadastre professores primeiro",
+      html += emptyCard(
+        "📝",
+        "Cadastre professores primeiro",
         "As tarefas são atribuídas aos professores. Cadastre ao menos um professor para começar.",
-        `<button class="btn" data-go="professores">Ir para professores</button>`);
+        `<button class="btn" data-go="professores">Ir para professores</button>`,
+      );
       view.innerHTML = html;
       bindGoButtons();
-      view.querySelectorAll("[data-new-task]").forEach((b) => b.setAttribute("disabled", ""));
+      view
+        .querySelectorAll("[data-new-task]")
+        .forEach((b) => b.setAttribute("disabled", ""));
       return;
     }
 
     // Filtro por mês.
-    if (tasksFilterMonth && !months.includes(tasksFilterMonth)) tasksFilterMonth = "";
+    if (tasksFilterMonth && !months.includes(tasksFilterMonth))
+      tasksFilterMonth = "";
     if (months.length) {
       html += `<div class="card" style="margin-bottom:16px"><div class="card__body" style="padding:12px 16px">
         <div class="flex gap center wrap">
@@ -356,13 +428,18 @@
       </div></div>`;
     }
 
-    if (tasksFilterMonth) tasks = tasks.filter((t) => Store.taskMonth(t) === tasksFilterMonth);
+    if (tasksFilterMonth)
+      tasks = tasks.filter((t) => Store.taskMonth(t) === tasksFilterMonth);
 
     if (tasks.length === 0) {
-      html += emptyCard("📝",
+      html += emptyCard(
+        "📝",
         tasksFilterMonth ? "Nenhuma tarefa neste mês" : "Nenhuma tarefa ainda",
-        tasksFilterMonth ? "Tente outro mês ou crie uma nova tarefa." : "Crie a primeira tarefa e atribua aos professores responsáveis.",
-        `<button class="btn" data-new-task>Nova tarefa</button>`);
+        tasksFilterMonth
+          ? "Tente outro mês ou crie uma nova tarefa."
+          : "Crie a primeira tarefa e atribua aos professores responsáveis.",
+        `<button class="btn" data-new-task>Nova tarefa</button>`,
+      );
       html = wrapTasksContainer(html);
       view.innerHTML = html;
       bindTaskActions(teachers);
@@ -370,13 +447,17 @@
     }
 
     html += `<div class="list" id="taskList">`;
-    tasks.forEach((task) => { html += renderTaskCard(task); });
+    tasks.forEach((task) => {
+      html += renderTaskCard(task);
+    });
     html += `</div>`;
     view.innerHTML = html;
     bindTaskActions(teachers);
   }
 
-  function wrapTasksContainer(inner) { return inner; }
+  function wrapTasksContainer(inner) {
+    return inner;
+  }
 
   function renderTaskCard(task) {
     const teacherMap = new Map(Store.getTeachers().map((t) => [t.id, t]));
@@ -386,20 +467,27 @@
     const pct = total ? Math.round((delivered / total) * 100) : 0;
     const expanded = expandedTasks.has(task.id);
 
-    const typeBadge = task.type === "monthly"
-      ? `<span class="badge badge--info">📅 Mensal</span>`
-      : `<span class="badge badge--muted">Avulsa</span>`;
-    const monthBadge = task.type === "monthly" && task.referenceMonth
-      ? `<span class="badge badge--muted">${escapeHtml(formatMonth(task.referenceMonth))}</span>` : "";
+    const typeBadge =
+      task.type === "monthly"
+        ? `<span class="badge badge--info">📅 Mensal</span>`
+        : `<span class="badge badge--muted">Avulsa</span>`;
+    const monthBadge =
+      task.type === "monthly" && task.referenceMonth
+        ? `<span class="badge badge--muted">${escapeHtml(formatMonth(task.referenceMonth))}</span>`
+        : "";
     const dueBadge = task.dueDate
-      ? `<span class="badge badge--muted">Entrega: ${escapeHtml(formatDate(task.dueDate))}</span>` : "";
-    const ruleBadge = task.dueRule === "firstFriday"
-      ? `<span class="badge badge--info">1ª sexta do mês</span>` : "";
-    const statusBadge = total === 0
-      ? `<span class="badge badge--muted">Sem responsáveis</span>`
-      : pending === 0
-        ? `<span class="badge badge--success">✓ Todos entregaram</span>`
-        : `<span class="badge badge--danger">${pending} ${pluralize(pending, "pendente", "pendentes")}</span>`;
+      ? `<span class="badge badge--muted">Entrega: ${escapeHtml(formatDate(task.dueDate))}</span>`
+      : "";
+    const ruleBadge =
+      task.dueRule === "firstFriday"
+        ? `<span class="badge badge--info">1ª sexta do mês</span>`
+        : "";
+    const statusBadge =
+      total === 0
+        ? `<span class="badge badge--muted">Sem responsáveis</span>`
+        : pending === 0
+          ? `<span class="badge badge--success">✓ Todos entregaram</span>`
+          : `<span class="badge badge--danger">${pending} ${pluralize(pending, "pendente", "pendentes")}</span>`;
 
     let deliveries = "";
     if (expanded) {
@@ -410,9 +498,10 @@
           .map((a) => {
             const teacher = teacherMap.get(a.teacherId);
             if (!teacher) return "";
-            const sub = a.delivered && a.deliveredAt
-              ? `Entregue em ${escapeHtml(formatDateTime(a.deliveredAt))}`
-              : "Pendente";
+            const sub =
+              a.delivered && a.deliveredAt
+                ? `Entregue em ${escapeHtml(formatDateTime(a.deliveredAt))}`
+                : "Pendente";
             return `
               <div class="delivery ${a.delivered ? "delivery--done" : ""}">
                 <div class="delivery__info">
@@ -425,7 +514,8 @@
                   <span>${a.delivered ? "Entregue" : "Marcar"}</span>
                 </label>
               </div>`;
-          }).join("");
+          })
+          .join("");
       }
     }
 
@@ -460,31 +550,54 @@
 
   function bindTaskActions(teachers) {
     view.querySelectorAll("[data-new-task]").forEach((b) =>
-      b.addEventListener("click", () => { if (!b.disabled) openTaskForm(null, teachers); }));
-    view.querySelectorAll("[data-edit-task]").forEach((b) =>
-      b.addEventListener("click", () => openTaskForm(b.getAttribute("data-edit-task"), teachers)));
-    view.querySelectorAll("[data-del-task]").forEach((b) =>
-      b.addEventListener("click", () => deleteTaskFlow(b.getAttribute("data-del-task"))));
+      b.addEventListener("click", () => {
+        if (!b.disabled) openTaskForm(null, teachers);
+      }),
+    );
+    view
+      .querySelectorAll("[data-edit-task]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          openTaskForm(b.getAttribute("data-edit-task"), teachers),
+        ),
+      );
+    view
+      .querySelectorAll("[data-del-task]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          deleteTaskFlow(b.getAttribute("data-del-task")),
+        ),
+      );
     view.querySelectorAll("[data-toggle-task]").forEach((b) =>
       b.addEventListener("click", () => {
         const tid = b.getAttribute("data-toggle-task");
         if (expandedTasks.has(tid)) expandedTasks.delete(tid);
         else expandedTasks.add(tid);
         refreshTaskCard(tid, teachers);
-      }));
-    view.querySelectorAll("[data-share-task]").forEach((b) =>
-      b.addEventListener("click", () => openShareModal(b.getAttribute("data-share-task"))));
+      }),
+    );
+    view
+      .querySelectorAll("[data-share-task]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          openShareModal(b.getAttribute("data-share-task")),
+        ),
+      );
     view.querySelectorAll("[data-delivery]").forEach((chk) =>
       chk.addEventListener("change", () => {
-        const [taskId, teacherId] = chk.getAttribute("data-delivery").split("|");
+        const [taskId, teacherId] = chk
+          .getAttribute("data-delivery")
+          .split("|");
         Store.setDelivery(taskId, teacherId, chk.checked);
         refreshTaskCard(taskId, teachers);
-      }));
+      }),
+    );
     const filter = view.querySelector("#taskMonthFilter");
-    if (filter) filter.addEventListener("change", () => {
-      tasksFilterMonth = filter.value;
-      renderTasks();
-    });
+    if (filter)
+      filter.addEventListener("change", () => {
+        tasksFilterMonth = filter.value;
+        renderTasks();
+      });
     bindGoButtons();
   }
 
@@ -492,7 +605,10 @@
   function refreshTaskCard(taskId, teachers) {
     const card = view.querySelector(`[data-task-card="${taskId}"]`);
     const task = Store.getTask(taskId);
-    if (!card || !task) { renderTasks(); return; }
+    if (!card || !task) {
+      renderTasks();
+      return;
+    }
     const tmp = document.createElement("div");
     tmp.innerHTML = renderTaskCard(task);
     const fresh = tmp.firstElementChild;
@@ -502,32 +618,56 @@
   }
 
   function rebindCard(card, teachers) {
-    card.querySelectorAll("[data-edit-task]").forEach((b) =>
-      b.addEventListener("click", () => openTaskForm(b.getAttribute("data-edit-task"), teachers)));
-    card.querySelectorAll("[data-del-task]").forEach((b) =>
-      b.addEventListener("click", () => deleteTaskFlow(b.getAttribute("data-del-task"))));
+    card
+      .querySelectorAll("[data-edit-task]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          openTaskForm(b.getAttribute("data-edit-task"), teachers),
+        ),
+      );
+    card
+      .querySelectorAll("[data-del-task]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          deleteTaskFlow(b.getAttribute("data-del-task")),
+        ),
+      );
     card.querySelectorAll("[data-toggle-task]").forEach((b) =>
       b.addEventListener("click", () => {
         const tid = b.getAttribute("data-toggle-task");
         if (expandedTasks.has(tid)) expandedTasks.delete(tid);
         else expandedTasks.add(tid);
         refreshTaskCard(tid, teachers);
-      }));
-    card.querySelectorAll("[data-share-task]").forEach((b) =>
-      b.addEventListener("click", () => openShareModal(b.getAttribute("data-share-task"))));
+      }),
+    );
+    card
+      .querySelectorAll("[data-share-task]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          openShareModal(b.getAttribute("data-share-task")),
+        ),
+      );
     card.querySelectorAll("[data-delivery]").forEach((chk) =>
       chk.addEventListener("change", () => {
-        const [taskId, teacherId] = chk.getAttribute("data-delivery").split("|");
+        const [taskId, teacherId] = chk
+          .getAttribute("data-delivery")
+          .split("|");
         Store.setDelivery(taskId, teacherId, chk.checked);
         refreshTaskCard(taskId, teachers);
-      }));
+      }),
+    );
   }
 
   function openTaskForm(id, teachers) {
     const task = id ? Store.getTask(id) : null;
-    const selected = new Set(task ? task.assignments.map((a) => a.teacherId) : teachers.map((t) => t.id));
+    const selected = new Set(
+      task
+        ? task.assignments.map((a) => a.teacherId)
+        : teachers.map((t) => t.id),
+    );
     const isMonthly = task ? task.type === "monthly" : true;
-    const defaultMonth = (task && task.referenceMonth) || new Date().toISOString().slice(0, 7);
+    const defaultMonth =
+      (task && task.referenceMonth) || new Date().toISOString().slice(0, 7);
 
     const html = `
       <form id="taskForm">
@@ -572,11 +712,15 @@
             </div>
           </div>
           <div id="teacherChecks" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:240px;overflow:auto">
-            ${teachers.map((t) => `
+            ${teachers
+              .map(
+                (t) => `
               <label class="checkbox-row">
                 <input type="checkbox" value="${t.id}" ${selected.has(t.id) ? "checked" : ""} />
                 <span>${escapeHtml(t.name)}${t.subjects.length ? ` <span class="muted text-sm">— ${escapeHtml(t.subjects.join(", "))}</span>` : ""}</span>
-              </label>`).join("")}
+              </label>`,
+              )
+              .join("")}
           </div>
           <div class="hint">Marque quem deve entregar esta tarefa.</div>
         </div>
@@ -587,7 +731,9 @@
       </form>`;
 
     openModal(id ? "Editar tarefa" : "Nova tarefa", html, (body) => {
-      body.querySelector("[data-close-modal]").addEventListener("click", closeModal);
+      body
+        .querySelector("[data-close-modal]")
+        .addEventListener("click", closeModal);
       const typeSel = body.querySelector("#kType");
       const monthField = body.querySelector("#monthField");
       const monthInput = body.querySelector("#kMonth");
@@ -619,18 +765,33 @@
       monthInput.addEventListener("change", applyFirstFriday);
       applyFirstFriday();
 
-      const checks = () => Array.from(body.querySelectorAll('#teacherChecks input[type="checkbox"]'));
-      body.querySelector("#selAll").addEventListener("click", () => checks().forEach((c) => (c.checked = true)));
-      body.querySelector("#selNone").addEventListener("click", () => checks().forEach((c) => (c.checked = false)));
+      const checks = () =>
+        Array.from(
+          body.querySelectorAll('#teacherChecks input[type="checkbox"]'),
+        );
+      body
+        .querySelector("#selAll")
+        .addEventListener("click", () =>
+          checks().forEach((c) => (c.checked = true)),
+        );
+      body
+        .querySelector("#selNone")
+        .addEventListener("click", () =>
+          checks().forEach((c) => (c.checked = false)),
+        );
 
       body.querySelector("#taskForm").addEventListener("submit", (e) => {
         e.preventDefault();
         const title = body.querySelector("#kTitle").value.trim();
-        if (!title) { toast("Informe o título da tarefa.", "danger"); return; }
+        if (!title) {
+          toast("Informe o título da tarefa.", "danger");
+          return;
+        }
         const type = typeSel.value;
         const referenceMonth = body.querySelector("#kMonth").value;
         if (type === "monthly" && !referenceMonth) {
-          toast("Informe o mês de referência.", "danger"); return;
+          toast("Informe o mês de referência.", "danger");
+          return;
         }
         const payload = {
           title,
@@ -639,10 +800,17 @@
           referenceMonth,
           dueDate: body.querySelector("#kDue").value,
           dueRule: type === "monthly" && fridayChk.checked ? "firstFriday" : "",
-          teacherIds: checks().filter((c) => c.checked).map((c) => c.value),
+          teacherIds: checks()
+            .filter((c) => c.checked)
+            .map((c) => c.value),
         };
-        if (id) { Store.updateTask(id, payload); toast("Tarefa atualizada.", "success"); }
-        else { Store.addTask(payload); toast("Tarefa criada.", "success"); }
+        if (id) {
+          Store.updateTask(id, payload);
+          toast("Tarefa atualizada.", "success");
+        } else {
+          Store.addTask(payload);
+          toast("Tarefa criada.", "success");
+        }
         closeModal();
         renderTasks();
       });
@@ -678,7 +846,10 @@
   function taskDueText(task) {
     if (task.dueDate) return { text: formatDate(task.dueDate), hasDate: true };
     if (task.type === "monthly" && task.referenceMonth) {
-      return { text: formatMonth(task.referenceMonth).toLowerCase(), hasDate: false };
+      return {
+        text: formatMonth(task.referenceMonth).toLowerCase(),
+        hasDate: false,
+      };
     }
     return { text: "", hasDate: false };
   }
@@ -692,14 +863,22 @@
     lines.push(`${g}, ${who}.`);
     lines.push("");
     if (due.hasDate) {
-      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}", cujo prazo final é ${due.text}.`);
+      lines.push(
+        `Gostaria de lembrar sobre a entrega da tarefa "${task.title}", cujo prazo final é ${due.text}.`,
+      );
     } else if (due.text) {
-      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}", referente ao mês de ${due.text}.`);
+      lines.push(
+        `Gostaria de lembrar sobre a entrega da tarefa "${task.title}", referente ao mês de ${due.text}.`,
+      );
     } else {
-      lines.push(`Gostaria de lembrar sobre a entrega da tarefa "${task.title}".`);
+      lines.push(
+        `Gostaria de lembrar sobre a entrega da tarefa "${task.title}".`,
+      );
     }
     lines.push("");
-    lines.push("Por gentileza, realize o envio dentro do prazo. Caso já tenha entregado, favor desconsiderar esta mensagem.");
+    lines.push(
+      "Por gentileza, realize o envio dentro do prazo. Caso já tenha entregado, favor desconsiderar esta mensagem.",
+    );
     lines.push("");
     lines.push("Atenciosamente,");
     lines.push("Coordenação.");
@@ -723,18 +902,21 @@
     const task = Store.getTask(taskId);
     if (!task) return;
     const teacherMap = new Map(Store.getTeachers().map((t) => [t.id, t]));
-    const assigned = task.assignments.map((a) => teacherMap.get(a.teacherId)).filter(Boolean);
+    const assigned = task.assignments
+      .map((a) => teacherMap.get(a.teacherId))
+      .filter(Boolean);
     const genericMsg = buildShareMessage(task, "");
 
     let teacherRows;
     if (!assigned.length) {
       teacherRows = `<p class="muted text-sm">Nenhum professor atribuído a esta tarefa. Edite a tarefa para adicionar responsáveis.</p>`;
     } else {
-      teacherRows = assigned.map((t) => {
-        const phone = normalizeWhatsPhone(t.phone);
-        if (phone) {
-          const msg = buildShareMessage(task, t.name);
-          return `
+      teacherRows = assigned
+        .map((t) => {
+          const phone = normalizeWhatsPhone(t.phone);
+          if (phone) {
+            const msg = buildShareMessage(task, t.name);
+            return `
             <div class="delivery">
               <div class="delivery__info">
                 <div class="delivery__name">${escapeHtml(t.name)}</div>
@@ -742,8 +924,8 @@
               </div>
               <a class="btn btn--sm" target="_blank" rel="noopener" href="${escapeHtml(waLink(phone, msg))}">Enviar</a>
             </div>`;
-        }
-        return `
+          }
+          return `
           <div class="delivery">
             <div class="delivery__info">
               <div class="delivery__name">${escapeHtml(t.name)}</div>
@@ -751,7 +933,8 @@
             </div>
             <button class="btn btn--ghost btn--sm" data-add-phone="${t.id}">Adicionar</button>
           </div>`;
-      }).join("");
+        })
+        .join("");
     }
 
     const html = `
@@ -772,7 +955,10 @@
     openModal("Compartilhar tarefa no WhatsApp", html, (body) => {
       body.querySelector("#copyMsg").addEventListener("click", async () => {
         const ok = await UI.copyText(body.querySelector("#shareMsg").value);
-        toast(ok ? "Mensagem copiada." : "Não foi possível copiar.", ok ? "success" : "danger");
+        toast(
+          ok ? "Mensagem copiada." : "Não foi possível copiar.",
+          ok ? "success" : "danger",
+        );
       });
       body.querySelector("#openWa").addEventListener("click", () => {
         const text = body.querySelector("#shareMsg").value;
@@ -784,7 +970,8 @@
           closeModal();
           navigate("professores");
           openTeacherForm(tid);
-        }));
+        }),
+      );
     });
   }
 
@@ -794,12 +981,16 @@
   function renderReports() {
     const months = Store.getMonthsWithTasks();
     if (months.length === 0) {
-      view.innerHTML = `
+      view.innerHTML =
+        `
         <div class="section-head"><div><h2 class="mt-0 mb-0">Relatórios</h2>
           <p>Pendências de entrega por mês.</p></div></div>` +
-        emptyCard("📄", "Nada para relatar ainda",
+        emptyCard(
+          "📄",
+          "Nada para relatar ainda",
           "Crie tarefas e atribua professores para gerar relatórios de pendências.",
-          `<button class="btn" data-go="tarefas">Ir para tarefas</button>`);
+          `<button class="btn" data-go="tarefas">Ir para tarefas</button>`,
+        );
       bindGoButtons();
       return;
     }
@@ -860,11 +1051,12 @@
       html += `<p class="muted mb-0">Nenhuma tarefa neste mês.</p>`;
     } else {
       report.tasks.forEach((tr) => {
-        const statusBadge = tr.total === 0
-          ? `<span class="badge badge--muted">Sem responsáveis</span>`
-          : tr.pendingCount === 0
-            ? `<span class="badge badge--success">✓ Completa</span>`
-            : `<span class="badge badge--danger">${tr.pendingCount} ${pluralize(tr.pendingCount, "pendente", "pendentes")}</span>`;
+        const statusBadge =
+          tr.total === 0
+            ? `<span class="badge badge--muted">Sem responsáveis</span>`
+            : tr.pendingCount === 0
+              ? `<span class="badge badge--success">✓ Completa</span>`
+              : `<span class="badge badge--danger">${tr.pendingCount} ${pluralize(tr.pendingCount, "pendente", "pendentes")}</span>`;
         html += `
           <div style="margin-bottom:18px">
             <div class="flex between center wrap" style="gap:8px">
@@ -876,9 +1068,13 @@
               ${tr.task.dueDate ? " • Entrega: " + escapeHtml(formatDate(tr.task.dueDate)) : ""}
               • ${tr.deliveredCount}/${tr.total} entregaram
             </div>
-            ${tr.pendingCount > 0
-              ? `<div class="text-sm"><strong>Não entregaram:</strong> ${tr.pending.map((p) => escapeHtml(p.teacher.name)).join(", ")}</div>`
-              : tr.total > 0 ? `<div class="text-sm muted">Todos entregaram.</div>` : ""}
+            ${
+              tr.pendingCount > 0
+                ? `<div class="text-sm"><strong>Não entregaram:</strong> ${tr.pending.map((p) => escapeHtml(p.teacher.name)).join(", ")}</div>`
+                : tr.total > 0
+                  ? `<div class="text-sm muted">Todos entregaram.</div>`
+                  : ""
+            }
           </div>`;
       });
     }
@@ -889,22 +1085,39 @@
       reportsMonth = e.target.value;
       renderReports();
     });
-    view.querySelector("#printReport").addEventListener("click", () => global.print());
-    view.querySelector("#csvReport").addEventListener("click", () => exportReportCsv(report));
+    view
+      .querySelector("#printReport")
+      .addEventListener("click", () => global.print());
+    view
+      .querySelector("#csvReport")
+      .addEventListener("click", () => exportReportCsv(report));
     bindGoButtons();
   }
 
   function exportReportCsv(report) {
-    const rows = [["Professor", "E-mail", "Tarefa nao entregue", "Mes de referencia"]];
+    const rows = [
+      ["Professor", "E-mail", "Tarefa nao entregue", "Mes de referencia"],
+    ];
     report.pendingTeachers.forEach((p) => {
       p.tasks.forEach((task) => {
-        rows.push([p.teacher.name, p.teacher.email || "", task, formatMonth(report.month)]);
+        rows.push([
+          p.teacher.name,
+          p.teacher.email || "",
+          task,
+          formatMonth(report.month),
+        ]);
       });
     });
-    if (rows.length === 1) rows.push(["(nenhuma pendencia)", "", "", formatMonth(report.month)]);
+    if (rows.length === 1)
+      rows.push(["(nenhuma pendencia)", "", "", formatMonth(report.month)]);
     const csv = rows.map((r) => r.map(csvCell).join(";")).join("\r\n");
     // BOM (﻿) garante acentuação correta ao abrir no Excel.
-    deliverFile(`pendencias-${report.month}.csv`, "﻿" + csv, "text/csv;charset=utf-8", "CSV");
+    deliverFile(
+      `pendencias-${report.month}.csv`,
+      "﻿" + csv,
+      "text/csv;charset=utf-8",
+      "CSV",
+    );
   }
 
   function csvCell(value) {
@@ -944,9 +1157,12 @@
       </div>`;
 
     if (!observations.length) {
-      html += emptyCard("👁️", "Nenhuma observação registrada",
+      html += emptyCard(
+        "👁️",
+        "Nenhuma observação registrada",
         "Registre a observação de uma aula e exporte o documento .docx no mesmo template do modelo oficial.",
-        `<button class="btn" data-new-obs>Nova observação</button>`);
+        `<button class="btn" data-new-obs>Nova observação</button>`,
+      );
       view.innerHTML = html;
       bindObsListActions();
       return;
@@ -958,7 +1174,8 @@
       const meta = [
         o.disciplina,
         o.serieTurma,
-        (formatDate(o.dataObservacao) || "") + (o.horario ? ` (${o.horario})` : ""),
+        (formatDate(o.dataObservacao) || "") +
+          (o.horario ? ` (${o.horario})` : ""),
       ].filter((x) => x && x.trim());
       html += `
         <div class="item">
@@ -989,30 +1206,61 @@
 
   function bindObsListActions() {
     view.querySelectorAll("[data-new-obs]").forEach((b) =>
-      b.addEventListener("click", () => { editingObsId = "new"; renderObservations(); }));
+      b.addEventListener("click", () => {
+        editingObsId = "new";
+        renderObservations();
+      }),
+    );
     view.querySelectorAll("[data-edit-obs]").forEach((b) =>
-      b.addEventListener("click", () => { editingObsId = b.getAttribute("data-edit-obs"); renderObservations(); }));
-    view.querySelectorAll("[data-del-obs]").forEach((b) =>
-      b.addEventListener("click", () => deleteObservationFlow(b.getAttribute("data-del-obs"))));
-    view.querySelectorAll("[data-export-obs]").forEach((b) =>
-      b.addEventListener("click", () => exportObservationDocx(b.getAttribute("data-export-obs"))));
+      b.addEventListener("click", () => {
+        editingObsId = b.getAttribute("data-edit-obs");
+        renderObservations();
+      }),
+    );
+    view
+      .querySelectorAll("[data-del-obs]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          deleteObservationFlow(b.getAttribute("data-del-obs")),
+        ),
+      );
+    view
+      .querySelectorAll("[data-export-obs]")
+      .forEach((b) =>
+        b.addEventListener("click", () =>
+          exportObservationDocx(b.getAttribute("data-export-obs")),
+        ),
+      );
   }
 
   function renderObsForm() {
     view.scrollTop = 0;
     const isNew = editingObsId === "new";
-    const obs = isNew ? Store.newObservationDraft() : Store.getObservation(editingObsId);
-    if (!obs) { editingObsId = null; renderObsList(); return; }
+    const obs = isNew
+      ? Store.newObservationDraft()
+      : Store.getObservation(editingObsId);
+    if (!obs) {
+      editingObsId = null;
+      renderObsList();
+      return;
+    }
     pageTitle.textContent = isNew ? "Nova observação" : "Editar observação";
 
     const teachers = Store.getTeachers();
-    const allSubjects = Array.from(new Set(teachers.flatMap((t) => t.subjects || [])))
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const allSubjects = Array.from(
+      new Set(teachers.flatMap((t) => t.subjects || [])),
+    ).sort((a, b) => a.localeCompare(b, "pt-BR"));
     const CRITERIA = DocxExport.CRITERIA;
     const GUIDANCE = DocxExport.GUIDANCE;
 
-    const teacherOpts = `<option value="">— Selecione um cadastrado —</option>` +
-      teachers.map((t) => `<option value="${t.id}" ${obs.teacherId === t.id ? "selected" : ""}>${escapeHtml(t.name)}</option>`).join("") +
+    const teacherOpts =
+      `<option value="">— Selecione um cadastrado —</option>` +
+      teachers
+        .map(
+          (t) =>
+            `<option value="${t.id}" ${obs.teacherId === t.id ? "selected" : ""}>${escapeHtml(t.name)}</option>`,
+        )
+        .join("") +
       `<option value="__manual__">Outro (digitar manualmente)</option>`;
 
     const critBlocks = CRITERIA.map((text, i) => {
@@ -1140,25 +1388,41 @@
       const t = teachers.find((x) => x.id === teacherSel.value);
       if (t) view.querySelector("#obsProfessor").value = t.name;
       const dl = view.querySelector("#discList");
-      const subs = t && t.subjects && t.subjects.length ? t.subjects : allSubjects;
-      dl.innerHTML = subs.map((s) => `<option value="${escapeHtml(s)}"></option>`).join("");
+      const subs =
+        t && t.subjects && t.subjects.length ? t.subjects : allSubjects;
+      dl.innerHTML = subs
+        .map((s) => `<option value="${escapeHtml(s)}"></option>`)
+        .join("");
     });
 
     view.querySelectorAll("[data-crit]").forEach((block) => {
       const i = block.getAttribute("data-crit");
-      block.querySelectorAll(`input[name="crit-${i}"]`).forEach((radio) =>
-        radio.addEventListener("change", () => updateCritLabels(block)));
+      block
+        .querySelectorAll(`input[name="crit-${i}"]`)
+        .forEach((radio) =>
+          radio.addEventListener("change", () => updateCritLabels(block)),
+        );
       const clr = block.querySelector("[data-clear-crit]");
       clr.addEventListener("click", () => {
-        block.querySelectorAll(`input[name="crit-${i}"]`).forEach((r) => (r.checked = false));
+        block
+          .querySelectorAll(`input[name="crit-${i}"]`)
+          .forEach((r) => (r.checked = false));
         updateCritLabels(block);
       });
     });
 
     view.querySelectorAll("[data-cancel-obs]").forEach((b) =>
-      b.addEventListener("click", () => { editingObsId = null; renderObservations(); }));
-    view.querySelector("[data-save-obs]").addEventListener("click", () => saveObservation(false));
-    view.querySelector("[data-save-export-obs]").addEventListener("click", () => saveObservation(true));
+      b.addEventListener("click", () => {
+        editingObsId = null;
+        renderObservations();
+      }),
+    );
+    view
+      .querySelector("[data-save-obs]")
+      .addEventListener("click", () => saveObservation(false));
+    view
+      .querySelector("[data-save-export-obs]")
+      .addEventListener("click", () => saveObservation(true));
   }
 
   function updateCritLabels(block) {
@@ -1169,13 +1433,20 @@
   }
 
   function collectObsPayload() {
-    const val = (id) => { const el = view.querySelector("#" + id); return el ? el.value : ""; };
+    const val = (id) => {
+      const el = view.querySelector("#" + id);
+      return el ? el.value : "";
+    };
     const teacherSel = view.querySelector("#obsTeacher");
-    const teacherId = teacherSel && /^t_/.test(teacherSel.value) ? teacherSel.value : "";
+    const teacherId =
+      teacherSel && /^t_/.test(teacherSel.value) ? teacherSel.value : "";
     const criterios = [];
     for (let i = 0; i < DocxExport.CRITERIA.length; i++) {
       const checked = view.querySelector(`input[name="crit-${i}"]:checked`);
-      criterios.push({ mark: checked ? checked.value : "", evidencias: val("ev-" + i) });
+      criterios.push({
+        mark: checked ? checked.value : "",
+        evidencias: val("ev-" + i),
+      });
     }
     return {
       teacherId,
@@ -1207,12 +1478,22 @@
 
   function saveObservation(exportAfter) {
     const payload = collectObsPayload();
-    if (!payload.professor.trim()) { toast("Informe o nome do professor(a).", "danger"); return; }
-    if (!payload.dataObservacao) { toast("Informe a data da observação.", "danger"); return; }
+    if (!payload.professor.trim()) {
+      toast("Informe o nome do professor(a).", "danger");
+      return;
+    }
+    if (!payload.dataObservacao) {
+      toast("Informe a data da observação.", "danger");
+      return;
+    }
     let saved;
-    if (editingObsId && editingObsId !== "new") saved = Store.updateObservation(editingObsId, payload);
+    if (editingObsId && editingObsId !== "new")
+      saved = Store.updateObservation(editingObsId, payload);
     else saved = Store.addObservation(payload);
-    if (!saved) { toast("Não foi possível salvar.", "danger"); return; }
+    if (!saved) {
+      toast("Não foi possível salvar.", "danger");
+      return;
+    }
     toast("Observação salva.", "success");
     if (exportAfter) exportObservationDocx(saved.id);
     editingObsId = null;
@@ -1235,10 +1516,15 @@
   }
 
   function obsSlug(s) {
-    return String(s || "")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-      .toLowerCase().slice(0, 40) || "professor";
+    return (
+      String(s || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase()
+        .slice(0, 40) || "professor"
+    );
   }
 
   function obsFilename(obs) {
@@ -1247,13 +1533,20 @@
 
   function exportObservationDocx(id) {
     const obs = Store.getObservation(id);
-    if (!obs) { toast("Observação não encontrada.", "danger"); return; }
+    if (!obs) {
+      toast("Observação não encontrada.", "danger");
+      return;
+    }
     if (typeof DocxExport === "undefined" || !DocxExport.buildDocx) {
       toast("Módulo de exportação indisponível.", "danger");
       return;
     }
     const lh = global.LETTERHEAD_JPEG_BASE64
-      ? { base64: global.LETTERHEAD_JPEG_BASE64, w: global.LETTERHEAD_JPEG_W || 726, h: global.LETTERHEAD_JPEG_H || 144 }
+      ? {
+          base64: global.LETTERHEAD_JPEG_BASE64,
+          w: global.LETTERHEAD_JPEG_W || 726,
+          h: global.LETTERHEAD_JPEG_H || 144,
+        }
       : null;
     try {
       const bytes = DocxExport.buildDocx(obs, { letterhead: lh });
@@ -1261,7 +1554,7 @@
         obsFilename(obs),
         bytes,
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Documento .docx"
+        "Documento .docx",
       );
     } catch (err) {
       console.error("Falha ao gerar .docx:", err);
@@ -1350,7 +1643,7 @@
           <button class="btn" id="driveConnect">Conectar / testar</button>
         </div>
         <p class="text-sm ${settings.driveEnabled ? "" : "muted"}" id="driveStatus" style="margin-bottom:0;margin-top:12px">
-          ${settings.driveEnabled ? "Envio ao Drive ativado. Use \"Conectar / testar\" para autorizar." : "Envio ao Drive desativado."}
+          ${settings.driveEnabled ? 'Envio ao Drive ativado. Use "Conectar / testar" para autorizar.' : "Envio ao Drive desativado."}
         </p>
       </div></div>
 
@@ -1364,14 +1657,22 @@
 
     view.querySelector("#btnExport").addEventListener("click", () => {
       const stamp = new Date().toISOString().slice(0, 10);
-      deliverFile(`gerencia-prof-backup-${stamp}.json`, Store.exportData(), "application/json", "Backup");
+      deliverFile(
+        `gerencia-prof-backup-${stamp}.json`,
+        Store.exportData(),
+        "application/json",
+        "Backup",
+      );
     });
 
     view.querySelector("#btnImport").addEventListener("click", () => {
       const fileInput = view.querySelector("#fileImport");
       const merge = view.querySelector("#mergeImport").checked;
       const file = fileInput.files && fileInput.files[0];
-      if (!file) { toast("Selecione um arquivo de backup.", "danger"); return; }
+      if (!file) {
+        toast("Selecione um arquivo de backup.", "danger");
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         try {
@@ -1389,7 +1690,8 @@
     view.querySelector("#btnSample").addEventListener("click", async () => {
       const ok = await confirmDialog({
         title: "Carregar dados de exemplo",
-        message: "Isto substituirá os dados atuais por um conjunto de demonstração. Continuar?",
+        message:
+          "Isto substituirá os dados atuais por um conjunto de demonstração. Continuar?",
         confirmText: "Carregar exemplo",
         danger: true,
       });
@@ -1402,7 +1704,8 @@
     view.querySelector("#btnClear").addEventListener("click", async () => {
       const ok = await confirmDialog({
         title: "Apagar todos os dados",
-        message: "Todos os professores e tarefas serão apagados deste dispositivo. Esta ação não pode ser desfeita. Tem certeza?",
+        message:
+          "Todos os professores e tarefas serão apagados deste dispositivo. Esta ação não pode ser desfeita. Tem certeza?",
         confirmText: "Apagar tudo",
         danger: true,
       });
@@ -1416,7 +1719,8 @@
     function readDriveFields() {
       return {
         googleClientId: view.querySelector("#driveClientId").value.trim(),
-        driveFolder: view.querySelector("#driveFolder").value.trim() || "Gerência Prof",
+        driveFolder:
+          view.querySelector("#driveFolder").value.trim() || "Gerência Prof",
         driveEnabled: view.querySelector("#driveEnabled").checked,
         driveKeepLocal: view.querySelector("#driveKeepLocal").checked,
       };
@@ -1430,21 +1734,35 @@
 
     view.querySelector("#driveConnect").addEventListener("click", async () => {
       const cfg = Store.setSettings(readDriveFields()); // salva antes de conectar
-      if (!cfg.googleClientId) { toast("Informe o Client ID do OAuth.", "danger"); return; }
-      if (typeof DriveSync === "undefined") { toast("Módulo do Drive indisponível.", "danger"); return; }
+      if (!cfg.googleClientId) {
+        toast("Informe o Client ID do OAuth.", "danger");
+        return;
+      }
+      if (typeof DriveSync === "undefined") {
+        toast("Módulo do Drive indisponível.", "danger");
+        return;
+      }
       if (!DriveSync.isSupported()) {
-        toast("Abra o app por http/https (localhost ou site) para usar o Drive.", "danger");
+        toast(
+          "Abra o app por http/https (localhost ou site) para usar o Drive.",
+          "danger",
+        );
         return;
       }
       driveStatus.textContent = "Conectando ao Google…";
       driveStatus.classList.remove("muted");
       try {
         await DriveSync.connect();
-        driveStatus.textContent = "Conectado ao Google Drive com sucesso. As exportações irão para a pasta \"" + cfg.driveFolder + "\".";
+        driveStatus.textContent =
+          'Conectado ao Google Drive com sucesso. As exportações irão para a pasta "' +
+          cfg.driveFolder +
+          '".';
         toast("Conectado ao Google Drive.", "success");
       } catch (err) {
         console.error(err);
-        driveStatus.textContent = "Falha ao conectar: " + (err && err.message ? err.message : "erro desconhecido");
+        driveStatus.textContent =
+          "Falha ao conectar: " +
+          (err && err.message ? err.message : "erro desconhecido");
         toast("Falha ao conectar ao Drive.", "danger");
       }
     });
@@ -1469,10 +1787,12 @@
     const drive = typeof DriveSync !== "undefined" ? DriveSync : null;
     if (drive && drive.isEnabled()) {
       toast("Enviando para o Google Drive…");
-      drive.upload(filename, content, mime)
+      drive
+        .upload(filename, content, mime)
         .then(() => {
           toast(label + " enviado ao Google Drive.", "success");
-          if (Store.getSettings().driveKeepLocal) downloadFile(filename, content, mime);
+          if (Store.getSettings().driveKeepLocal)
+            downloadFile(filename, content, mime);
         })
         .catch((err) => {
           console.error("Falha no envio ao Drive:", err);
@@ -1501,21 +1821,29 @@
   }
 
   function bindGoButtons() {
-    view.querySelectorAll("[data-go]").forEach((b) =>
-      b.addEventListener("click", () => navigate(b.getAttribute("data-go"))));
+    view
+      .querySelectorAll("[data-go]")
+      .forEach((b) =>
+        b.addEventListener("click", () => navigate(b.getAttribute("data-go"))),
+      );
   }
 
   // ======================================================================
   //  Menu lateral (mobile)
   // ======================================================================
-  function openSidebar() { document.getElementById("sidebar").classList.add("open"); }
-  function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); }
+  function openSidebar() {
+    document.getElementById("sidebar").classList.add("open");
+  }
+  function closeSidebar() {
+    document.getElementById("sidebar").classList.remove("open");
+  }
 
   function initSidebar() {
     const toggle = document.getElementById("menuToggle");
-    if (toggle) toggle.addEventListener("click", () => {
-      document.getElementById("sidebar").classList.toggle("open");
-    });
+    if (toggle)
+      toggle.addEventListener("click", () => {
+        document.getElementById("sidebar").classList.toggle("open");
+      });
     // Fecha ao clicar fora no modo mobile.
     document.addEventListener("click", (e) => {
       const sidebar = document.getElementById("sidebar");
@@ -1538,7 +1866,9 @@
     // Registra o service worker (funciona quando servido via http/https).
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       global.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").catch(() => { /* offline opcional */ });
+        navigator.serviceWorker.register("sw.js").catch(() => {
+          /* offline opcional */
+        });
       });
     }
   }

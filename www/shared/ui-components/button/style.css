@@ -1,0 +1,77 @@
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 15px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--primary);
+    color: #fff;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, opacity .15s;
+    font-family: inherit;
+}
+
+.btn:hover {
+    background: var(--primary-dark);
+}
+
+.btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.btn--ghost {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.btn--ghost:hover {
+    background: var(--bg);
+}
+
+.btn--danger {
+    background: var(--danger);
+}
+
+.btn--danger:hover {
+    background: #b91c1c;
+}
+
+.btn--sm {
+    padding: 6px 11px;
+    font-size: .82rem;
+}
+
+.btn--block {
+    width: 100%;
+}
+
+.btn-icon {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: .95rem;
+    color: var(--text);
+    transition: background .15s, border-color .15s;
+}
+
+.btn-icon:hover {
+    background: var(--bg);
+}
+
+.btn-icon--danger:hover {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+    color: var(--danger);
+}
