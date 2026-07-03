@@ -1,0 +1,32 @@
+.delivery {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+}
+
+.delivery+.delivery {
+    margin-top: 8px;
+}
+
+.delivery__info {
+    min-width: 0;
+}
+
+.delivery__name {
+    font-weight: 600;
+}
+
+.delivery__sub {
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+
+.delivery--done {
+    background: var(--success-soft);
+    border-color: #bbf7d0;
+}

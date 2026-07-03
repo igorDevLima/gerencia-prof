@@ -1,0 +1,96 @@
+.obs-crit {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    background: var(--bg);
+}
+
+.obs-crit__text {
+    font-weight: 600;
+    font-size: .92rem;
+    margin-bottom: 8px;
+}
+
+.obs-crit__marks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.obs-crit .textarea {
+    background: var(--surface);
+}
+
+.radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 600;
+    user-select: none;
+    background: var(--surface);
+    transition: background .12s, border-color .12s, color .12s;
+}
+
+.radio input {
+    accent-color: var(--primary);
+    margin: 0;
+}
+
+.radio--sim.radio--on {
+    background: var(--success-soft);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.radio--nao.radio--on {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.radio--na.radio--on {
+    background: var(--warning-soft);
+    border-color: var(--warning);
+    color: var(--warning);
+}
+
+.linklike {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: .8rem;
+    text-decoration: underline;
+    padding: 4px 6px;
+    margin-left: auto;
+}
+
+.linklike:hover {
+    color: var(--danger);
+}
+
+.obs-advanced {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.obs-advanced summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: .88rem;
+    color: var(--primary-dark);
+}
+
+.obs-advanced>.field,
+.obs-advanced>.form-row {
+    margin-top: 12px;
+}

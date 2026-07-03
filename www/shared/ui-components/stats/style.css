@@ -1,0 +1,19 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.stat__value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.stat__label { color: var(--text-muted); font-size: .85rem; margin-top: 2px; }
+.stat--primary .stat__value { color: var(--primary); }
+.stat--danger .stat__value { color: var(--danger); }
+.stat--success .stat__value { color: var(--success); }
+.stat--warning .stat__value { color: var(--warning); }

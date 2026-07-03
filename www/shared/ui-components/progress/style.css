@@ -1,0 +1,14 @@
+.progress {
+    height: 8px;
+    background: var(--bg);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress__bar {
+    height: 100%;
+    background: var(--success);
+    border-radius: 999px;
+    transition: width .3s;
+}

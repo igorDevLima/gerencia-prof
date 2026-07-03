@@ -1,0 +1,34 @@
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.card+.card {
+    margin-top: 16px;
+}
+
+.card__body {
+    padding: 18px;
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.section-head h2 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.section-head p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: .9rem;
+}
