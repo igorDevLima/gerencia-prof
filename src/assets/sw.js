@@ -1,16 +1,12 @@
 /* ===========================================================================
-   sw.js — service worker para uso offline (cache dos arquivos do app)
+   sw.js — service worker para uso offline (cache dos arquivos do app).
+   Os nomes de saída do webpack são estáveis (js/app.js, css/styles.css).
    =========================================================================== */
-const CACHE = "gerencia-prof-v3";
+const CACHE = "gerencia-prof-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/styles.css",
-  "./js/letterhead.js",
-  "./js/docx.js",
-  "./js/store.js",
-  "./js/ui.js",
-  "./js/drive.js",
   "./js/app.js",
   "./manifest.json",
   "./img/icon.svg",

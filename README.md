@@ -31,33 +31,41 @@ dados, login ou mensalidade. Tudo funciona dentro do navegador e **offline**.
 
 ## 🚀 Como usar
 
-Escolha **uma** das opções abaixo. Não há custo em nenhuma delas.
+O projeto usa **webpack** e organização **package-by-feature**. O código-fonte
+fica em `src/`; o build gera a pasta `www/` (consumida pelo navegador e pelo
+Cordova). Você precisa do [Node.js](https://nodejs.org) instalado (gratuito).
 
-### Opção 1 — Abrir direto no navegador (mais simples)
-
-Abra o arquivo [`www/index.html`](www/index.html) com um duplo clique.
-Funciona em qualquer navegador moderno (Chrome, Edge, Firefox, Safari).
-
-> Observação: nesse modo o recurso offline (service worker) fica desativado,
-> mas **todas as funções principais funcionam normalmente**.
-
-### Opção 2 — Servidor local (recomendado p/ usar como app instalável)
-
-Precisa apenas do [Node.js](https://nodejs.org) instalado (gratuito):
+Primeiro, instale as dependências (uma vez):
 
 ```bash
-npm start
+npm install
 ```
 
-Depois abra **http://localhost:8080** no navegador. Assim o modo offline e a
-instalação como aplicativo (PWA) ficam habilitados.
+### Opção 1 — Desenvolvimento (recomendado)
+
+```bash
+npm run dev
+```
+
+Sobe o `webpack-dev-server` em **http://localhost:8080** com recarga automática.
+Modo offline (service worker) e instalação como app (PWA) ficam habilitados.
+
+### Opção 2 — Build de produção + pré-visualização
+
+```bash
+npm run build      # gera a pasta www/
+npm run preview    # servidor estático simples em http://localhost:8080
+```
 
 ### Opção 3 — Publicar grátis no GitHub Pages
 
-1. Faça o push deste repositório para o GitHub.
-2. Em **Settings → Pages**, selecione a branch e a pasta `/www` (ou mova o conteúdo
-   de `www/` para a raiz, se preferir publicar a partir da raiz).
-3. Acesse o endereço gerado pelo GitHub Pages — hospedagem gratuita.
+1. Rode `npm run build` para gerar `www/`.
+2. Publique o **conteúdo de `www/`** no GitHub Pages (por exemplo, via GitHub
+   Actions no push, ou empurrando `www/` para uma branch `gh-pages`).
+
+> Scripts disponíveis: `npm run build` (produção), `npm run build:dev`,
+> `npm run watch`, `npm run dev`, `npm run preview`, `npm run prepare-app`
+> (build + `cordova prepare`), `npm run android`, `npm run ios`.
 
 ---
 
@@ -74,15 +82,18 @@ Ele passa a abrir como um aplicativo, em tela cheia e funcionando offline.
 
 ## 📦 Gerar um APK com Cordova (opcional)
 
-O projeto já segue a estrutura do Cordova (pasta `www/` + `config.xml`).
-Para empacotar como aplicativo Android:
+O `config.xml` aponta para a pasta `www/`, que é **gerada pelo build**.
+Sempre rode o build antes de empacotar:
 
 ```bash
 # Instale o Cordova (gratuito)
 npm install -g cordova
 
 # Na pasta do projeto:
+npm run build            # gera www/ com o webpack
 cordova platform add android
+npm run android          # = npm run build && cordova run android
+# ou, manualmente:
 cordova build android
 ```
 
@@ -142,8 +153,9 @@ observações, o CSV de pendências e o backup `.json`) para o **seu Google Driv
 sem backend e sem custo. O app usa o acesso **mínimo** (`drive.file`): ele só
 enxerga e gerencia **os arquivos que ele mesmo cria** — nunca o resto do seu Drive.
 
-> Requisitos: o app precisa ser aberto por **http/https** (via `npm start` ou
-> GitHub Pages). Não funciona abrindo o `index.html` como arquivo (`file://`).
+> Requisitos: o app precisa ser aberto por **http/https** (via `npm run dev`,
+> `npm run preview` ou GitHub Pages). Não funciona abrindo o `index.html` como
+> arquivo (`file://`).
 
 ### Passo 1 — Criar as credenciais no Google Cloud (uma vez)
 
@@ -182,27 +194,37 @@ localmente** automaticamente, para você não perder nada. Há também a opção
 
 ---
 
-## 🗂️ Estrutura do projeto
+## 🗂️ Estrutura do projeto (package-by-feature)
+
+O código-fonte fica em `src/`, organizado **por feature** (cada pasta reúne a
+tela, os dados e a lógica daquela funcionalidade). O `www/` é **gerado pelo
+build** (não versionado).
 
 ```
 gerencia-prof/
-├── www/                    ← raiz do app (compatível com Cordova)
-│   ├── index.html          ← página principal (SPA)
-│   ├── css/styles.css      ← estilos (responsivo, modo de impressão, mobile)
-│   ├── js/
-│   │   ├── store.js        ← dados e regras (localStorage, relatórios, observações)
-│   │   ├── ui.js           ← utilitários de interface (modal, toast, formatação)
-│   │   ├── docx.js         ← gerador de .docx (ZIP + OOXML, sem dependências)
-│   │   ├── letterhead.js   ← timbre oficial (imagem em base64) p/ o .docx
-│   │   ├── drive.js        ← envio das exportações ao Google Drive (opcional)
-│   │   └── app.js          ← telas e navegação
-│   ├── img/                ← ícones do app
-│   ├── manifest.json       ← configuração PWA
-│   └── sw.js               ← service worker (uso offline)
-├── docs/
-│   └── template-observacao-aula.docx  ← modelo oficial de referência
-├── config.xml              ← configuração do Cordova
-├── server.js               ← servidor estático local (sem dependências)
+├── src/
+│   ├── index.js                 ← entry (estilos, casca, roteador)
+│   ├── index.html               ← template (webpack injeta JS/CSS)
+│   ├── core/                    ← infraestrutura compartilhada
+│   │   ├── db.js                ← persistência (localStorage) + configurações
+│   │   └── ui/                  ← escape, format, modal, toast, files
+│   ├── app/                     ← casca do app
+│   │   ├── router.js  routes.js  shell.js  deliver.js  facade.js  sampleData.js
+│   ├── features/                ← uma pasta por funcionalidade
+│   │   ├── dashboard/           ← painel (view + store)
+│   │   ├── teachers/            ← professores (view + store)
+│   │   ├── tasks/               ← tarefas (view + store + share WhatsApp)
+│   │   ├── observations/        ← observação de aula (view, store, docx,
+│   │   │                          critérios, timbre, scss)
+│   │   ├── reports/             ← relatórios (view + store)
+│   │   └── backup/              ← backup + Google Drive (view + drive.js)
+│   ├── styles/global.scss       ← estilos globais (SCSS)
+│   └── assets/                  ← manifest.json, sw.js, img/ (copiados no build)
+├── www/                         ← SAÍDA do build (gerada; não versionada)
+├── docs/template-observacao-aula.docx  ← modelo oficial de referência
+├── webpack.config.js  .babelrc
+├── config.xml                   ← configuração do Cordova (aponta p/ www/)
+├── server.js                    ← servidor estático simples (npm run preview)
 ├── package.json
 └── README.md
 ```
@@ -211,8 +233,9 @@ gerencia-prof/
 
 ## 🧰 Tecnologias
 
-HTML, CSS e JavaScript puro (sem frameworks e **sem dependências**). Isso garante
-que o app seja leve, gratuito e fácil de manter por muitos anos.
+HTML, SCSS e JavaScript (ES Modules) empacotados com **webpack** + **Babel**,
+organização **package-by-feature**. O app não usa frameworks de UI nem
+dependências em tempo de execução — apenas ferramentas de build.
 
 ## 📄 Licença
 
