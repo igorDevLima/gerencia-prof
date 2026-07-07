@@ -7,8 +7,12 @@ import { toast } from "../../core/ui/toast.js";
 import { confirmDialog } from "../../core/ui/modal.js";
 import { deliverFile } from "../../app/deliver.js";
 import {
-  getObservations, getObservation, addObservation, updateObservation,
-  deleteObservation, newObservationDraft,
+  getObservations,
+  getObservation,
+  addObservation,
+  updateObservation,
+  deleteObservation,
+  newObservationDraft,
 } from "./observations.store.js";
 import { CRITERIA, GUIDANCE, FEEDBACK_HINTS } from "./observations.criteria.js";
 import { buildDocx } from "./observations.docx.js";
@@ -16,7 +20,9 @@ import { getTeachers } from "../teachers/teachers.store.js";
 
 // null = lista; "new" = nova; id = editando. Resetado ao trocar de rota.
 let editingObsId = null;
-export function resetObsEditing() { editingObsId = null; }
+export function resetObsEditing() {
+  editingObsId = null;
+}
 
 export function renderObservations() {
   if (editingObsId) renderObsForm();
@@ -47,9 +53,12 @@ function renderObsList() {
     </div>`;
 
   if (!observations.length) {
-    html += emptyCard("👁️", "Nenhuma observação registrada",
+    html += emptyCard(
+      "👁️",
+      "Nenhuma observação registrada",
       "Registre a observação de uma aula e exporte o documento .docx no mesmo template do modelo oficial.",
-      `<button class="btn" data-new-obs>Nova observação</button>`);
+      `<button class="btn" data-new-obs>Nova observação</button>`,
+    );
     view.innerHTML = html;
     bindObsListActions();
     return;
@@ -61,7 +70,8 @@ function renderObsList() {
     const meta = [
       o.disciplina,
       o.serieTurma,
-      (formatDate(o.dataObservacao) || "") + (o.horario ? ` (${o.horario})` : ""),
+      (formatDate(o.dataObservacao) || "") +
+        (o.horario ? ` (${o.horario})` : ""),
     ].filter((x) => x && x.trim());
     html += `
       <div class="item">
@@ -92,28 +102,57 @@ function renderObsList() {
 
 function bindObsListActions() {
   view.querySelectorAll("[data-new-obs]").forEach((b) =>
-    b.addEventListener("click", () => { editingObsId = "new"; renderObservations(); }));
+    b.addEventListener("click", () => {
+      editingObsId = "new";
+      renderObservations();
+    }),
+  );
   view.querySelectorAll("[data-edit-obs]").forEach((b) =>
-    b.addEventListener("click", () => { editingObsId = b.getAttribute("data-edit-obs"); renderObservations(); }));
-  view.querySelectorAll("[data-del-obs]").forEach((b) =>
-    b.addEventListener("click", () => deleteObservationFlow(b.getAttribute("data-del-obs"))));
-  view.querySelectorAll("[data-export-obs]").forEach((b) =>
-    b.addEventListener("click", () => exportObservationDocx(b.getAttribute("data-export-obs"))));
+    b.addEventListener("click", () => {
+      editingObsId = b.getAttribute("data-edit-obs");
+      renderObservations();
+    }),
+  );
+  view
+    .querySelectorAll("[data-del-obs]")
+    .forEach((b) =>
+      b.addEventListener("click", () =>
+        deleteObservationFlow(b.getAttribute("data-del-obs")),
+      ),
+    );
+  view
+    .querySelectorAll("[data-export-obs]")
+    .forEach((b) =>
+      b.addEventListener("click", () =>
+        exportObservationDocx(b.getAttribute("data-export-obs")),
+      ),
+    );
 }
 
 function renderObsForm() {
   view.scrollTop = 0;
   const isNew = editingObsId === "new";
   const obs = isNew ? newObservationDraft() : getObservation(editingObsId);
-  if (!obs) { editingObsId = null; renderObsList(); return; }
+  if (!obs) {
+    editingObsId = null;
+    renderObsList();
+    return;
+  }
   pageTitle.textContent = isNew ? "Nova observação" : "Editar observação";
 
   const teachers = getTeachers();
-  const allSubjects = Array.from(new Set(teachers.flatMap((t) => t.subjects || [])))
-    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const allSubjects = Array.from(
+    new Set(teachers.flatMap((t) => t.subjects || [])),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  const teacherOpts = `<option value="">— Selecione um cadastrado —</option>` +
-    teachers.map((t) => `<option value="${t.id}" ${obs.teacherId === t.id ? "selected" : ""}>${escapeHtml(t.name)}</option>`).join("") +
+  const teacherOpts =
+    `<option value="">— Selecione um cadastrado —</option>` +
+    teachers
+      .map(
+        (t) =>
+          `<option value="${t.id}" ${obs.teacherId === t.id ? "selected" : ""}>${escapeHtml(t.name)}</option>`,
+      )
+      .join("") +
     `<option value="__manual__">Outro (digitar manualmente)</option>`;
 
   const critBlocks = CRITERIA.map((text, i) => {
@@ -241,24 +280,40 @@ function bindObsForm(teachers, allSubjects) {
     const t = teachers.find((x) => x.id === teacherSel.value);
     if (t) view.querySelector("#obsProfessor").value = t.name;
     const dl = view.querySelector("#discList");
-    const subs = t && t.subjects && t.subjects.length ? t.subjects : allSubjects;
-    dl.innerHTML = subs.map((s) => `<option value="${escapeHtml(s)}"></option>`).join("");
+    const subs =
+      t && t.subjects && t.subjects.length ? t.subjects : allSubjects;
+    dl.innerHTML = subs
+      .map((s) => `<option value="${escapeHtml(s)}"></option>`)
+      .join("");
   });
 
   view.querySelectorAll("[data-crit]").forEach((block) => {
     const i = block.getAttribute("data-crit");
-    block.querySelectorAll(`input[name="crit-${i}"]`).forEach((radio) =>
-      radio.addEventListener("change", () => updateCritLabels(block)));
+    block
+      .querySelectorAll(`input[name="crit-${i}"]`)
+      .forEach((radio) =>
+        radio.addEventListener("change", () => updateCritLabels(block)),
+      );
     block.querySelector("[data-clear-crit]").addEventListener("click", () => {
-      block.querySelectorAll(`input[name="crit-${i}"]`).forEach((r) => (r.checked = false));
+      block
+        .querySelectorAll(`input[name="crit-${i}"]`)
+        .forEach((r) => (r.checked = false));
       updateCritLabels(block);
     });
   });
 
   view.querySelectorAll("[data-cancel-obs]").forEach((b) =>
-    b.addEventListener("click", () => { editingObsId = null; renderObservations(); }));
-  view.querySelector("[data-save-obs]").addEventListener("click", () => saveObservation(false));
-  view.querySelector("[data-save-export-obs]").addEventListener("click", () => saveObservation(true));
+    b.addEventListener("click", () => {
+      editingObsId = null;
+      renderObservations();
+    }),
+  );
+  view
+    .querySelector("[data-save-obs]")
+    .addEventListener("click", () => saveObservation(false));
+  view
+    .querySelector("[data-save-export-obs]")
+    .addEventListener("click", () => saveObservation(true));
 }
 
 function updateCritLabels(block) {
@@ -269,13 +324,20 @@ function updateCritLabels(block) {
 }
 
 function collectObsPayload() {
-  const val = (id) => { const el = view.querySelector("#" + id); return el ? el.value : ""; };
+  const val = (id) => {
+    const el = view.querySelector("#" + id);
+    return el ? el.value : "";
+  };
   const teacherSel = view.querySelector("#obsTeacher");
-  const teacherId = teacherSel && /^t_/.test(teacherSel.value) ? teacherSel.value : "";
+  const teacherId =
+    teacherSel && /^t_/.test(teacherSel.value) ? teacherSel.value : "";
   const criterios = [];
   for (let i = 0; i < CRITERIA.length; i++) {
     const checked = view.querySelector(`input[name="crit-${i}"]:checked`);
-    criterios.push({ mark: checked ? checked.value : "", evidencias: val("ev-" + i) });
+    criterios.push({
+      mark: checked ? checked.value : "",
+      evidencias: val("ev-" + i),
+    });
   }
   return {
     teacherId,
@@ -307,12 +369,22 @@ function collectObsPayload() {
 
 function saveObservation(exportAfter) {
   const payload = collectObsPayload();
-  if (!payload.professor.trim()) { toast("Informe o nome do professor(a).", "danger"); return; }
-  if (!payload.dataObservacao) { toast("Informe a data da observação.", "danger"); return; }
+  if (!payload.professor.trim()) {
+    toast("Informe o nome do professor(a).", "danger");
+    return;
+  }
+  if (!payload.dataObservacao) {
+    toast("Informe a data da observação.", "danger");
+    return;
+  }
   let saved;
-  if (editingObsId && editingObsId !== "new") saved = updateObservation(editingObsId, payload);
+  if (editingObsId && editingObsId !== "new")
+    saved = updateObservation(editingObsId, payload);
   else saved = addObservation(payload);
-  if (!saved) { toast("Não foi possível salvar.", "danger"); return; }
+  if (!saved) {
+    toast("Não foi possível salvar.", "danger");
+    return;
+  }
   toast("Observação salva.", "success");
   if (exportAfter) exportObservationDocx(saved.id);
   editingObsId = null;
@@ -334,13 +406,6 @@ async function deleteObservationFlow(id) {
   renderObservations();
 }
 
-function obsSlug(s) {
-  return String(s || "")
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-    .toLowerCase().slice(0, 40) || "professor";
-}
-
 function obsFilename(obs) {
   const date = obs.dataObservacao;
   const splitedDate = String(date).split("-");
@@ -352,14 +417,17 @@ function obsFilename(obs) {
 
 function exportObservationDocx(id) {
   const obs = getObservation(id);
-  if (!obs) { toast("Observação não encontrada.", "danger"); return; }
+  if (!obs) {
+    toast("Observação não encontrada.", "danger");
+    return;
+  }
   try {
     const bytes = buildDocx(obs);
     deliverFile(
       obsFilename(obs),
       bytes,
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Documento .docx"
+      "Documento .docx",
     );
   } catch (err) {
     console.error("Falha ao gerar .docx:", err);
