@@ -342,7 +342,12 @@ function obsSlug(s) {
 }
 
 function obsFilename(obs) {
-  return `observacao-aula-${obsSlug(obs.professor)}-${obs.dataObservacao || "sem-data"}.docx`;
+  const date = obs.dataObservacao;
+  const splitedDate = String(date).split("-");
+  const mouth = splitedDate[1];
+  const day = splitedDate[2];
+
+  return `${date ? mouth + " - " + day + " - " : ""}OBSERVAÇÃO - ${String(obs.disciplina).toUpperCase()}.docx`;
 }
 
 function exportObservationDocx(id) {
