@@ -1,5 +1,6 @@
 # Dependências
 node_modules/
+package-lock.json
 
 # Saída do build (gerada por `npm run build`)
 /www/
