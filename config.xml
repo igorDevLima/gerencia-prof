@@ -20,13 +20,13 @@
 
     <platform name="android">
         <allow-intent href="market:*" />
-        <icon src="www/assets/img/icon-512.png" density="xxxhdpi" />
-        <icon src="www/assets/img/icon-192.png" density="xhdpi" />
+        <icon src="www/img/icon-512.png" density="xxxhdpi" />
+        <icon src="www/img/icon-192.png" density="xhdpi" />
     </platform>
 
     <platform name="ios">
         <allow-intent href="itms:*" />
         <allow-intent href="itms-apps:*" />
-        <icon src="www/assets/img/icon-512.png" width="512" height="512" />
+        <icon src="www/img/icon-512.png" width="512" height="512" />
     </platform>
 </widget>
